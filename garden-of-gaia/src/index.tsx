@@ -3,13 +3,30 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { ThemeProvider, createTheme } from '@mui/material/styles'; // Import these
+
+// Create a theme instance
+const theme = createTheme({
+  // Your theme options go here
+  // For example:
+  palette: {
+    primary: {
+      main: '#556cd6',
+    },
+    // Add more customization here
+  },
+});
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
 );
+
+// Wrap App inside ThemeProvider
 root.render(
   <React.StrictMode>
-    <App />
+    <ThemeProvider theme={theme}>
+      <App />
+    </ThemeProvider>
   </React.StrictMode>
 );
 
