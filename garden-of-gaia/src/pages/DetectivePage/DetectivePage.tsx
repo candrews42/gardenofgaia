@@ -1,22 +1,33 @@
 // src/pages/DetectivePage/DetectivePage.tsx
 
 import React, { useState } from 'react';
-import { TextField, Button } from '@mui/material'; // Import Button from Material UI
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import PhotoCamera from '@mui/icons-material/PhotoCamera';
 
 const DetectivePage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [location, setLocation] = useState('');
   const [plantName, setPlantName] = useState('');
   const [notes, setNotes] = useState('');
+  const [image, setImage] = useState<File | null>(null);
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    console.log({ username, location, plantName, notes });
+    console.log({ username, location, plantName, notes, image });
   };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setImage(event.target.files[0]);
+    }
+  };
+
 
   return (
     <div>
-      <h1>Detective Page</h1>
+      <h1>Plant Detective</h1>
       <form onSubmit={handleSubmit}>
         <TextField
           label="Username"
@@ -48,6 +59,23 @@ const DetectivePage: React.FC = () => {
           multiline
           rows={4} // You can adjust the number of rows
         />
+        {/* Image upload input */}
+        <input
+          accept="image/*"
+          style={{ display: 'none' }}
+          id="icon-button-file"
+          type="file"
+          onChange={handleImageChange}
+          capture="environment" // This attribute enables capturing images directly from a camera
+        />
+        <label htmlFor="icon-button-file">
+          <IconButton color="primary" aria-label="upload picture" component="span">
+            <PhotoCamera />
+          </IconButton>
+        </label>
+        {image && <p>Image selected: {image.name}</p>}
+        {/* Submit Button */}
+        <br />
         <Button type="submit" variant="contained" color="primary">
           Submit
         </Button>
