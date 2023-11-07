@@ -1,6 +1,6 @@
 Detective Page:
 [x] first draft
-[] add hint to notes box in .pages/DetectivePage/DetectivePage.tsx [Sean, see below]
+[] add hint to notes box in .pages/DetectivePage/DetectivePage.tsx [Donovan]
 [] add google location services
 [] try to add browser location
 [] connect database
