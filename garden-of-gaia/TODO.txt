@@ -1,0 +1,10 @@
+Detective Page:
+[x] first draft
+[] add hint to notes box in .pages/DetectivePage/DetectivePage.tsx [Sean, see below]
+[] add google location services
+[] try to add browser location
+[] connect database
+
+App:
+[] get react app hosted
+[] make sure database is sustainable, low cost [w/ Andrew]
