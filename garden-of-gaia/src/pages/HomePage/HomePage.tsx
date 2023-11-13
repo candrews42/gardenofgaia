@@ -10,6 +10,7 @@ const HomePage: React.FC = () => {
       <nav>
         <Link to="/planttracker">Plant Tracker</Link><br />
         <Link to="/map">View Map</Link><br />
+        <Link to="/walkthrough">Walkthrough</Link><br />
         <Link to="/dashboard">Dashboard</Link><br />
       </nav>
     </div>

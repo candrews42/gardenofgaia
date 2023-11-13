@@ -62,7 +62,8 @@ app.get('/api/plant_tracker', async (req, res) => {
     }
   });
 
-  // POST endpoint to add an entry to the plant_tracker table
+
+// POST endpoint to add an entry to the plant_tracker table
 app.post('/api/plant-tracker', async (req, res) => {
     try {
         const { date, location, plant_id, action, notes, picture } = req.body;
@@ -76,3 +77,21 @@ app.post('/api/plant-tracker', async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
+
+// POST endpoint to add an entry to the area_tracker table
+app.post('/api/area-tracker-raw', async (req, res) => {
+    try {
+        const { date, location_id, notes } = req.body;
+        const newEntry = await pool.query(
+            'INSERT INTO area_tracker_raw (date, location_id, notes) VALUES ($1, $2, $3) RETURNING *',
+            [date, location_id, notes]
+        );
+        res.json(newEntry.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+## TODO add username and image as columns to the area_tracker_raw table
+then update the post above to make sure these are added from the area walkthrough
