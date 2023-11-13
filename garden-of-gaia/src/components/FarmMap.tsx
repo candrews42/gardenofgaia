@@ -5,7 +5,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './Map.css';
 import Tooltip from '../components/Tooltip';
-import ReactDOM from 'react-dom';
+import { createRoot } from 'react-dom/client';
 
 mapboxgl.accessToken = process.env.REACT_APP_MAPBOX_API_KEY || "undefined"; // Replace with your Mapbox access token
 
@@ -40,17 +40,18 @@ const FarmMap = () => {
         map.on('mousemove', e => {
             const features = map.queryRenderedFeatures(e.point);
             if (features.length) {
-            const feature = features[0];
+                const feature = features[0];
 
-            // Create tooltip node
-            const tooltipNode = document.createElement('div');
-            ReactDOM.render(<Tooltip feature={feature} />, tooltipNode);
+                // Create tooltip node
+                const tooltipNode = document.createElement('div');
+                const root = createRoot(tooltipNode); // Create a root.
+                root.render(<Tooltip feature={feature} />); // Use root.render() instead of ReactDOM.render()
 
-            // Set tooltip on map
-            tooltipRef.current
-                .setLngLat(e.lngLat)
-                .setDOMContent(tooltipNode)
-                .addTo(map);
+                // Set tooltip on map
+                tooltipRef.current
+                    .setLngLat(e.lngLat)
+                    .setDOMContent(tooltipNode)
+                    .addTo(map);
             }
         });
     
