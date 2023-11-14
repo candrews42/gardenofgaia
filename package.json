@@ -1,7 +1,15 @@
 {
   "dependencies": {
+    "@mui/lab": "^5.0.0-alpha.152",
+    "@mui/styled-engine-sc": "^6.0.0-alpha.5",
+    "@mui/x-date-pickers": "^6.18.1",
+    "date-fns": "^2.30.0",
+    "dayjs": "^1.11.10",
     "h3-js": "^4.1.0",
-    "mapbox-gl": "^2.15.0"
+    "mapbox-gl": "^2.15.0",
+    "multer": "^1.4.5-lts.1",
+    "sharp": "^0.32.6",
+    "styled-components": "^6.1.1"
   },
   "devDependencies": {
     "@types/mapbox-gl": "^2.7.18"

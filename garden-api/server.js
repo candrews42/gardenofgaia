@@ -78,14 +78,31 @@ app.post('/api/plant-tracker', async (req, res) => {
     }
 });
 
-// POST endpoint to add an entry to the area_tracker table
-app.post('/api/area-tracker-raw', async (req, res) => {
+
+const multer = require('multer');
+const sharp = require('sharp');
+const upload = multer({ storage: multer.memoryStorage() }); // Store images in memory for processing
+
+app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
     try {
-        const { date, location_id, notes } = req.body;
+        console.log('received:', req.body);
+        const { date, location_id, notes, username, current_location } = req.body;
+
+        let resizedImage;
+        if (req.file) {
+            // Resize the image to a maximum width of 800 pixels and convert to JPEG
+            resizedImage = await sharp(req.file.buffer)
+                .resize({ width: 800 })
+                .jpeg({ quality: 80 })
+                .toBuffer();
+        }
+
+        console.log('received:', date, location_id, notes, username, current_location, resizedImage);
         const newEntry = await pool.query(
-            'INSERT INTO area_tracker_raw (date, location_id, notes) VALUES ($1, $2, $3) RETURNING *',
-            [date, location_id, notes]
+            'INSERT INTO area_tracker_raw (date, location_id, notes, username, current_location, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
+            [date, location_id, notes, username, current_location, resizedImage]
         );
+        
         res.json(newEntry.rows[0]);
     } catch (err) {
         console.error(err.message);
@@ -93,5 +110,4 @@ app.post('/api/area-tracker-raw', async (req, res) => {
     }
 });
 
-## TODO add username and image as columns to the area_tracker_raw table
-then update the post above to make sure these are added from the area walkthrough
+
