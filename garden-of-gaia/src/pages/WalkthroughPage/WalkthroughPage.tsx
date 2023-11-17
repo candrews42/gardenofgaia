@@ -89,11 +89,36 @@ const WalkthroughPage: React.FC = () => {
     //     setSelectedDate(newDate);
     // };
 
+    // fetch plant snapshots 
+    const [plantSnapshots, setPlantSnapshots] = useState<any[]>([]); // Add a state for plant snapshots
+    // Fetch plant snapshots when the selected bed changes
+    useEffect(() => {
+        if (selectedArea && selectedBed) {
+            fetch(`http://localhost:3001/api/plant-snapshots?area=${selectedArea}&bed=${selectedBed}`)
+                .then(response => response.json())
+                .then(data => setPlantSnapshots(data))
+                .catch(error => console.error('Error fetching plant snapshots:', error));
+        }
+    }, [selectedArea, selectedBed]); // Dependency array includes selectedArea and selectedBed
+
+
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
+
+        // Find the location_id that matches both the selected area and bed
+        const selectedLocation = gardenLocations.find(location => 
+            location.area === selectedArea && location.bed === selectedBed
+            
+        );
+        if (!selectedLocation) {
+            console.error('Error: Location not found');
+            return;
+        }   
+
         const formData = new FormData();
         formData.append('date', new Date().toISOString().slice(0, 10));
-        formData.append('location_id', gardenLocations[currentLocationIndex].id.toString());
+        formData.append('location_id', selectedLocation.id.toString()); // Updated to use the correct location_id
+        // formData.append('location_id', gardenLocations[currentLocationIndex].id.toString());
         formData.append('notes', notes);
         formData.append('username', username);
         formData.append('current_location', autoFilledLocation);
@@ -112,8 +137,10 @@ const WalkthroughPage: React.FC = () => {
                 body: formData, // FormData is used for file upload
             });
     
-            // Find the index of the current location
-            const currentIndex = gardenLocations.findIndex(location => location.id === gardenLocations[currentLocationIndex].id);
+            // Find the next index based on the selected bed
+            const currentIndex = gardenLocations.findIndex(location => 
+                location.area === selectedArea && location.bed === selectedBed
+            );
             const nextIndex = currentIndex + 1;
 
             if (nextIndex < gardenLocations.length) {
@@ -211,6 +238,16 @@ const WalkthroughPage: React.FC = () => {
                 <Button type="submit" variant="contained" color="primary">
                     {currentLocationIndex < gardenLocations.length - 1 ? 'Next Location' : 'Finish Walkthrough'}
                 </Button>
+                <br />
+                {/* Display plant snapshots */}
+                <div>
+                    <h2>Plant Snapshots in {selectedBed}</h2>
+                    {plantSnapshots.map(snapshot => (
+                        <div key={snapshot.id}>
+                            <p>{snapshot.plant_name}: {snapshot.notes}</p>
+                        </div>
+                    ))}
+                </div>
             </form>
         </div>
     );
