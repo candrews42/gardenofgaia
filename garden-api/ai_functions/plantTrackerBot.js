@@ -2,25 +2,19 @@ const db = require('../db');
 require('dotenv').config({ path: '../.env' });
 const { OpenAI } = require('openai');
 const openai = new OpenAI({ key: process.env.OPENAI_API_KEY });
-const { queryOpenAI } = require('./openaiService'); 
+const { queryOpenAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshot } = require('./openaiService'); 
 
 async function processGardenNotes(record) {
     try {
         // STEP 1. Parse observation and add to plant_tracker
         console.log(`Processing record: ${record.notes}`);
-        const prompt = `From these garden notes: "${record.notes}", create a JSON list of objects using EXACTLY the structure below and ensure all fields are accurately filled. Respond ONLY AND EXACTLY in a JSON list of objects as shown below (notes to you in []), which will be fed into a program that receives this structure and will break otherwise. Here is the contents of one record for the JSON structure:
-        {'date': '${record.date}', 'location_id': '${record.location_id}', 'plant_name': [extract the name of the plant], 'action_category': exactly one of ['observation', 'task', or 'event'], 'notes': [Extract and summarize the record notes related only to that specific plant.]}`;    
-        console.log('Prompt: ', prompt);
+        // Call the new function to process garden notes
+        const plantInfos = await processGardenNotesWithAI(record);
+        console.log("plant infos: ", plantInfos)
 
-        const messageContent = await queryOpenAI(prompt);
-
-        let plantInfos, plantInfo
-
-        if (messageContent) {
-            console.log("OpenAI response:", messageContent);
-            plantInfos = JSON.parse(messageContent);
-
-            for (plantInfo of plantInfos) {
+        if (plantInfos) {
+            for (const plantInfo of plantInfos) {
+                console.log("plant info:", plantInfo)
                 // Database operations for each plant
                 await db.query(
                     'INSERT INTO plant_tracker (date, location_id, plant_name, action_category, notes, picture) VALUES ($1, $2, $3, $4, $5, $6)', 
@@ -37,49 +31,39 @@ async function processGardenNotes(record) {
                 
         // STEP 2. Parse plant_tracker and add to plant_snapshot
         console.log("Next, update plant snapshot...")
-        for (plantInfo of plantInfos) {
-            // Query to check if a snapshot already exists
-            console.log("Checking for existing plant snapshot for", plantInfo.plant_name);
-            const snapshotQuery = 'SELECT id FROM plant_snapshot WHERE plant_name = $1 AND location_id = $2';
-            const snapshotResult = await db.query(snapshotQuery, [plantInfo.plant_name, record.location_id]);
-            // console.log("existing snapshot:", snapshotResult)
+        // Collect all updates
+        async function processBatchUpdates(plantInfos, record) {
+            let batchUpdates = [];
+            for (const plantInfo of plantInfos) {
+                console.log("Checking for existing plant snapshot for", plantInfo.plant_name);
+                const snapshotQuery = 'SELECT * FROM plant_snapshot WHERE plant_name = $1 AND location_id = $2';
+                const snapshotResult = await db.query(snapshotQuery, [plantInfo.plant_name, record.location_id]);
+                const existingSnapshot = snapshotResult.rowCount > 0 ? snapshotResult.rows[0] : null;
+                console.log("existing snap:", existingSnapshot)
 
-            let snapshotId;
-
-            // check if there is an existing snapshot
-            if (snapshotResult.rowCount > 0) {
-                console.log("Existing snapshot found for ", plantInfo.plant_name, "... preparing to update...");
-                // analyze plant snapshot for any updates
-                const existingSnapshot = snapshotResult.rows.length > 0 ? snapshotResult.rows[0] : null;
-
-                const updatePrompt = `Given the current snapshot: "${JSON.stringify(existingSnapshot)}" and the new plant information: "${JSON.stringify(plantInfo)}", create a JSON object using EXACTLY the structure below and ensure all fields are accurately filled. Respond ONLY AND EXACTLY with the following structure:
-
-                {'updated_date': '${new Date().toISOString()}', 'location_id': '${existingSnapshot ? existingSnapshot.location_id : record.location_id}', 'plant_name': '${existingSnapshot ? existingSnapshot.plant_name : plantInfo.plant_name}', 'plant_status': [insert updated plant status], 'notes': [insert updated notes]}.`;
-                console.log('AI Update Prompt:', updatePrompt);
-
-                const updatedSnapshotContent = await queryOpenAI(updatePrompt);
-
-                if (updatedSnapshotContent) {
-                    console.log("AI Update Response:", updatedSnapshotContent);
-                    const updatedSnapshot = JSON.parse(updatedSnapshotContent);
-
-                    // Update the existing snapshot
-                    snapshotId = snapshotResult.rows[0].id;
-                    const updateQuery = 'UPDATE plant_snapshot SET updated_date = CURRENT_DATE, plant_status = $1, notes = $2 WHERE id = $3';
-                    await db.query(updateQuery, [updatedSnapshot.plant_status, updatedSnapshot.notes, snapshotId]);
-                    console.log(`Snapshot updated.`);
-                }
-            } else {
-                console.log("No existing snapshot, inserting new snapshot...");
-                // Insert a new snapshot
-                const insertQuery = 'INSERT INTO plant_snapshot (updated_date, location_id, plant_name, plant_status, notes) VALUES (CURRENT_DATE, $1, $2, $3, $4) RETURNING id';
-                const newSnapshot = await db.query(insertQuery, [record.location_id, plantInfo.plant_name, plantInfo.plant_status, plantInfo.notes]);
-                snapshotId = newSnapshot.rows[0].id;
-                console.log(`New snapshot inserted with id: ${snapshotId}.`);
+                batchUpdates.push({ plantInfo, existingSnapshot });
             }
 
-            // Now snapshotId contains the ID of the relevant snapshot, which can be used for further operations like linking tasks.
+            // Process the batch updates
+            const updatedSnapshots = await processPlantTrackerToPlantSnapshot(batchUpdates, record);
+            console.log("updated snapshots:", updatedSnapshots)
+
+            // Iterate over updatedSnapshots to update or insert into the database
+            for (const updatedSnapshot of updatedSnapshots.updatedSnapshot) {
+                if (updatedSnapshot.id) {
+                    // Update existing snapshot
+                    const updateQuery = 'UPDATE plant_snapshot SET updated_date = $1, plant_status = $2, notes = $3 WHERE id = $4';
+                    await db.query(updateQuery, [updatedSnapshot.updated_date, updatedSnapshot.plant_status, updatedSnapshot.notes, updatedSnapshot.id]);
+                } else {
+                    // Insert new snapshot
+                    const insertQuery = 'INSERT INTO plant_snapshot (updated_date, location_id, plant_name, plant_status, notes) VALUES ($1, $2, $3, $4, $5) RETURNING id';
+                    await db.query(insertQuery, [updatedSnapshot.updated_date, updatedSnapshot.location_id, updatedSnapshot.plant_name, updatedSnapshot.plant_status, updatedSnapshot.notes]);
+                }
+            }
+            console.log("Finished processing all garden notes.");
         }
+        await processBatchUpdates(plantInfos, record);
+
         console.log("Finished processing all garden notes.");
     } catch (error) {
         console.error('Error processing garden notes:', record.id, error);

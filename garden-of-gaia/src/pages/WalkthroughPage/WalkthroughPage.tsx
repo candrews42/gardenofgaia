@@ -141,7 +141,7 @@ const WalkthroughPage: React.FC = () => {
             const currentIndex = gardenLocations.findIndex(location => 
                 location.area === selectedArea && location.bed === selectedBed
             );
-            const nextIndex = currentIndex + 1;
+            const nextIndex = currentIndex; //+ 1;
 
             if (nextIndex < gardenLocations.length) {
                 setSelectedArea(gardenLocations[nextIndex].area);
@@ -159,8 +159,6 @@ const WalkthroughPage: React.FC = () => {
     if (currentLocationIndex >= gardenLocations.length) {
         return <div>Walkthrough complete!</div>;
     }
-
-    const currentLocation = gardenLocations[currentLocationIndex];
 
     return (
         <div>
