@@ -1,11 +1,14 @@
-const db = require('../db');
 require('dotenv').config({ path: '../.env' });
 const { OpenAI } = require('openai');
 const openai = new OpenAI({ key: process.env.OPENAI_API_KEY });
 
+const openai_model_options = ["gpt-3.5-turbo-1106", "gpt-4-1106-preview"]
+const openai_model = openai_model_options[1]
+
+
 async function queryOpenAI(prompt) {
     const response = await openai.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: openai_model,
         messages: [{ role: 'system', content: prompt }],
         stream: false
     });
@@ -25,7 +28,7 @@ async function processGardenNotesWithAI(record) {
             "type": "function",
             "function": {
                 "name": "process_garden_notes",
-                "description": "A function that takes garden notes and returns structured data about plants in a JSON list. plant_name is the plant name. action_category is enum [observation, task, or event]. Notes should be summarized notes from the record",
+                "description": "A function that takes garden notes and returns structured data about plants in a JSON list. plant_name is the singular common plant name (e.g. tomato, not tomatoes and not tomato seeds). action_category is enum [observation or task (requires FUTURE action by some human)]. Notes summarizes notes from the record",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -33,15 +36,14 @@ async function processGardenNotesWithAI(record) {
                             "type": "array",
                             "description": "A list of plants and info extracted from garden notes.",
                             "items":{
-                                "date": {"type": "string", "description": "Date of the garden note"},
-                                "location_id": {"type": "string", "description": "Location identifier"},
                                 "plant_name": {"type": "string", "description": "Name of the plant"},
-                                "action_category": {"type": "string", "enum": ["observation", "task", "event"], "description": "Category of the action"},
+                                "action_category": {"type": "string", "enum": ["observation", "task"], "description": "Category of the action"},
                                 "notes": {"type": "string", "description": "Summary of the notes related to the specific plant"}
-                                }
+                                },
+                            "required": ["plant_name", "action_category", "notes"]
                             }
                         },
-                    "required": ["plantList"] //, "location_id", "plant_name", "action_category", "notes"]
+                    "required": ["plantList"] 
                 }
             }
         }
@@ -49,50 +51,29 @@ async function processGardenNotesWithAI(record) {
 
     // Messages to instruct the model
     const messages = [
-        {"role": "system", "content": "Analyze the garden notes and return a JSON list of objects, each object representing a different plant mentioned in the notes. Each object should contain fields: date, location_id, plant_name, action_category, and notes. If there's only one plant mentioned, return a list with a single object." },
+        {"role": "system", "content": "Analyze the garden notes and return a JSON list of objects, each object representing a different plant mentioned in the notes. Each object should populate fields: plant_name [singular common plant name], action_category [enum: task (requires future action by some human), observation (happened in past or user predicts)], and notes [describing task or observation]. If there's only one plant mentioned, return a list with a single object." },
         {'role': 'user', 'content': `Garden notes: ${record.notes}`}
     ];
 
-
-    console.log("Sending the following messages to OpenAI:", messages);
+    console.log("Sending the following record notes to OpenAI for processing:", messages);
 
     try {
         // Making the API call with the structured tool
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: openai_model,
             messages: messages,
             tools: tools,
-            tool_choice: "auto"
+            // tool_choice: "auto"
+            tool_choice: {"type": "function", "function": {"name": "process_garden_notes"}},
+            response_format: {type: "json_object"}
         });
         // console.log("Received response from OpenAI:", response);
 
         // Parsing the function call object
-        if (response.choices && response.choices.length > 0) {
-            const messageObject = response.choices[0].message;
-
-            if (messageObject && messageObject.tool_calls && messageObject.tool_calls.length > 0) {
-                const functionCall = messageObject.tool_calls[0];
-                // console.log("Function call object:", functionCall);
-
-                if (functionCall.function && functionCall.function.arguments) {
-                    const argumentsString = functionCall.function.arguments;
-                    // console.log("Arguments string:", argumentsString);
-                    
-                    // Parse the stringified JSON
-                    const parsedContent = JSON.parse(argumentsString);
-                    console.log("Parsed response:", parsedContent);
-
-                    // Extract and return the plantList
-                    return parsedContent.plantList;
-                } else {
-                    console.log("No arguments in the function call object");
-                }
-            } else {
-                console.log("No tool_calls in the message object");
-            }
-        } else {
-            console.log("No valid choices in the response");
-        }
+        const message = response.choices[0].message.tool_calls[0].function.arguments;
+        const parsedContent = JSON.parse(message).plantList;
+        console.log("received from OpenAI: ", parsedContent)
+        return parsedContent
 
     } catch (error) {
         console.error('Error in processGardenNotesWithAI:', error);
@@ -101,14 +82,14 @@ async function processGardenNotesWithAI(record) {
     return null;
 }
 
-async function processPlantTrackerToPlantSnapshot(batchUpdates, record) {
+async function processPlantTrackerToPlantSnapshotAI(plantInfos, existingSnapshots) {
     // Define the tool for processing plant tracker data
     const tools = [
         {
             "type": "function",
             "function": {
                 "name": "update_plant_snapshot",
-                "description": "A function that processes plant tracker data and provides instructions for updating plant snapshot. Each includes id (taken from old snapshot), location_id (taken from old snapshot), plant_name, plant_status, and notes.",
+                "description": "A function that processes plant tracker data and provides instructions for updating plant snapshot. Each includes plant_name, plant_status (healthy, fruiting, sick, etc.), and notes (relevant to the gardener to care for the plant on their rounds).",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -116,12 +97,11 @@ async function processPlantTrackerToPlantSnapshot(batchUpdates, record) {
                             "type": "array",
                             "description": "A list of the updated snapshots of the plants.",
                             "items": {
-                                "id": {"type": "string"},
-                                "location_id": {"type": "string"},
                                 "plant_name": {"type": "string"},
-                                "plant_status": {"type": "string"},
-                                "notes": {"type": "string"}
-                            }
+                                "plant_status": {"type": "string", "description": "something like healthy, fruiting, sick, etc."},
+                                "notes": {"type": "string", "description": "any notes relevant to the gardener to care for the plant"}
+                            },
+                            "required": ["plant_name", "plant_status", "notes"]
                         }
                     },
                     "required": ["updatedSnapshot"]
@@ -130,34 +110,43 @@ async function processPlantTrackerToPlantSnapshot(batchUpdates, record) {
 
     // Messages to instruct the model
     const messages = [
-        {"role": "system", "content": "Based on the provided plant tracker data and current plant snapshot, provide the updated plant snapshot." },
-        {'role': 'user', 'content': `${JSON.stringify(batchUpdates)}`}]
-    console.log(messages)
+        {
+            "role": "system", 
+            "content": "Process each pair of plant tracker data and existing snapshot in the batch using the update_plant_snapshot tool. For each pair, provide an updated snapshot considering the new plant information and the current snapshot state in JSON format. Each object should contain the fields plant_name, plant_status, and notes."
+        },
+        {
+            'role': 'user', 
+            'content': `Batch updates: ${JSON.stringify(existingSnapshots)}`
+        }
+    ];
+    
+    console.log("Sending to OpenAI for processing into plant_snapshot:", messages);
 
     try {
-        // API call with structured tool
+        // Making the API call with the structured tool
         const response = await openai.chat.completions.create({
-            model: "gpt-3.5-turbo",
+            model: openai_model,
             messages: messages,
             tools: tools,
-            tool_choice: "auto"
+            // tool_choice: "auto"
+            tool_choice: {"type": "function", "function": {"name": "update_plant_snapshot"}},
+            response_format: {type: "json_object"}
         });
+        // console.log("Received response from OpenAI:", response);
 
-        // Process response to extract instructions
-        if (response.choices && response.choices.length > 0) {
-            const messageObject = response.choices[0].message;
-            if (messageObject && messageObject.tool_calls && messageObject.tool_calls.length > 0) {
-                const functionCall = messageObject.tool_calls[0];
-                if (functionCall.function && functionCall.function.arguments) {
-                    const updatedSnapshot = JSON.parse(functionCall.function.arguments);
-                    return updatedSnapshot
-                }}}
+        // Parsing the function call object
+        const message = response.choices[0].message.tool_calls[0].function.arguments;
+        const parsedContent = JSON.parse(message).updatedSnapshot;
+        console.log("received from OpenAI: ", parsedContent)
+        return parsedContent
+
     } catch (error) {
-        console.error('Error in processPlantTrackerToPlantSnapshot:', error);
+        console.error('Error in processGardenNotesWithAI:', error);
     }
-    return null
+
+    return null;
 }
 
 
-module.exports = { queryOpenAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshot };
+module.exports = { queryOpenAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI };
 

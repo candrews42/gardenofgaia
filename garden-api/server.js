@@ -136,9 +136,13 @@ app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
         );
 
         // After successful insertion, process the garden notes
-        await processGardenNotes(newEntry.rows[0]);
+        record = newEntry.rows[0]
+        const plantInfos = await processGardenNotes(record);
+        //res.json({ message: 'Garden notes successfully added to plant_tracker.' });
+        await processPlantTrackerForSnapshot(record, plantInfos);
+        res.json({ message: 'plant_snapshot updated successfully.' });
         
-        res.json(newEntry.rows[0]);
+        
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ error: err.message });
@@ -147,11 +151,13 @@ app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
 
 // AI INTERACTIONS
 // plantTrackerBot 
-const { processGardenNotes } = require('./ai_functions/plantTrackerBot'); // Adjust the path to plantTrackerBot.js
+const { processGardenNotes, processPlantTrackerForSnapshot } = require('./ai_functions/plantTrackerBot'); // Adjust the path to plantTrackerBot.js
 app.post('/api/process-garden-notes', async (req, res) => {
     try {
-        await processGardenNotes();
-        res.json({ message: 'Garden notes processed successfully.' });
+        const plantInfos = await processGardenNotes();
+        res.json({ message: 'Garden notes successfully added to plant_tracker.' });
+        await processPlantTrackerForSnapshot();
+        res.json({ message: 'plant_snapshot updated successfully.' });
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
