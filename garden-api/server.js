@@ -90,6 +90,30 @@ app.get('/api/plant-snapshots', async (req, res) => {
     }
 });
 
+// Route to get task entries for a specific area and bed
+app.get('/api/tasks', async (req, res) => {
+    try {
+        const { area, bed } = req.query;
+        // Assuming you have a way to map area and bed to location_id
+        const locationIdQuery = 'SELECT id FROM garden_locations WHERE area = $1 AND bed = $2';
+        const locationResult = await pool.query(locationIdQuery, [area, bed]);
+
+        if (locationResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Location not found' });
+        }
+
+        const locationId = locationResult.rows[0].id;
+
+        const tasksQuery = 'SELECT * FROM task_manager WHERE location_id = $1';
+        const tasksResult = await pool.query(tasksQuery, [locationId]);
+        
+        res.json(tasksResult.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 
 // POST endpoint to add an entry to the plant_tracker table
 app.post('/api/plant-tracker', async (req, res) => {
