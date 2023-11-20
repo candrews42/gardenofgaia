@@ -90,8 +90,6 @@ app.get('/api/plant-snapshots', async (req, res) => {
     }
 });
 
-// ... (rest of your server code)
-
 
 // POST endpoint to add an entry to the plant_tracker table
 app.post('/api/plant-tracker', async (req, res) => {
@@ -112,6 +110,7 @@ app.post('/api/plant-tracker', async (req, res) => {
 const multer = require('multer');
 const sharp = require('sharp');
 const upload = multer({ storage: multer.memoryStorage() }); // Store images in memory for processing
+const { processTaskList, processGardenNotes, processPlantTrackerForSnapshot } = require('./ai_functions/plantTrackerBot'); // Adjust the path to plantTrackerBot.js
 
 app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
     try {
@@ -128,41 +127,31 @@ app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
                 .toBuffer();
         }
         
-        // insert into database
+        // insert raw observations into area_tracker_raw table
         console.log('received:', date, location_id, notes, username, current_location, resizedImage);
         const newEntry = await pool.query(
             'INSERT INTO area_tracker_raw (date, location_id, notes, username, current_location, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
             [date, location_id, notes, username, current_location, resizedImage]
         );
-
         // After successful insertion, process the garden notes
         record = newEntry.rows[0]
-        const plantInfos = await processGardenNotes(record);
-        //res.json({ message: 'Garden notes successfully added to plant_tracker.' });
-        await processPlantTrackerForSnapshot(record, plantInfos);
-        res.json({ message: 'plant_snapshot updated successfully.' });
+
+        // first, extract and update any tasks
+        const taskList = await processTaskList(record);
+
+        // process garden notes record into plant_tracker table
+        // const plantInfos = await processGardenNotes(record);
+
+        // process new plant tracker table entrise to update plant snapshot
+        // await processPlantTrackerForSnapshot(record, plantInfos);
+
+        res.json({ message: 'databases updated successfully.' });
         
         
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ error: err.message });
     }
-});
-
-// AI INTERACTIONS
-// plantTrackerBot 
-const { processGardenNotes, processPlantTrackerForSnapshot } = require('./ai_functions/plantTrackerBot'); // Adjust the path to plantTrackerBot.js
-app.post('/api/process-garden-notes', async (req, res) => {
-    try {
-        const plantInfos = await processGardenNotes();
-        res.json({ message: 'Garden notes successfully added to plant_tracker.' });
-        await processPlantTrackerForSnapshot();
-        res.json({ message: 'plant_snapshot updated successfully.' });
-    } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-    }
-    
 });
 
 

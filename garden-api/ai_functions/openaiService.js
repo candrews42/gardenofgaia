@@ -147,6 +147,72 @@ async function processPlantTrackerToPlantSnapshotAI(plantInfos, existingSnapshot
     return null;
 }
 
+// TASK MANAGEMENT
+async function processTaskListWithAI(record, existingTasks) {
+    // Define the tool for processing task manager data
+    const tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "update_task_manager",
+                "description": "A function that processes record notes and extracts tasks, including updating existing tasks. Each task includes a task ID (if it exists), task_description and status, and (if the info is there) due date, status, assignee, priority. Use the properties in parameters.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "updatedTasks": {
+                            "type": "array",
+                            "description": "A list of tasks with updated information.",
+                            "items": {
+                                "id": {"type": "string", "description": "unique identifier for the task, if it exists"},
+                                "task_description": {"type": "string"},
+                                "status": {"type": "string", "description": "ENUM waiting, assigned, complete"},
+                                "assignee": {"type": "string", "description": "who the task is assigned to"},
+                                "due_date": {"type": "string", "description": "date the task is due"}
+                            },
+                            "required": ["task_description", "status"]
+                        }
+                    },
+                    "required": ["updatedTasks"]
+                }
+            }
+        }
+    ];
 
-module.exports = { queryOpenAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI };
+    // Messages to instruct the model
+    const messages = [
+        {
+            "role": "system", 
+            "content": "Extract tasks from the record notes and provide details in JSON format, including at least task description and status, with any other relevant details, and the task ID if updating an existing task"
+        },
+        {
+            'role': 'user', 
+            'content': `Record notes: ${JSON.stringify(record.notes)}; existing tasks: ${JSON.stringify(existingTasks)}`
+        }
+    ];
+    
+    console.log("Sending to OpenAI for processing tasks:", messages);
+
+    try {
+        // Making the API call with the structured tool
+        const response = await openai.chat.completions.create({
+            model: openai_model,
+            messages: messages,
+            tools: tools,
+            tool_choice: {"type": "function", "function": {"name": "update_task_manager"}},
+            response_format: {type: "json_object"}
+        });
+
+        // Parsing the function call object
+        const message = response.choices[0].message.tool_calls[0].function.arguments;
+        const parsedContent = JSON.parse(message).updatedTasks;
+        return parsedContent
+
+    } catch (error) {
+        console.error('Error in processTaskListWithAI:', error);
+    }
+
+}
+
+
+module.exports = { queryOpenAI, processTaskListWithAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI };
 

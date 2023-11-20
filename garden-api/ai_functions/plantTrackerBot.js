@@ -2,8 +2,29 @@ const db = require('../db');
 require('dotenv').config({ path: '../.env' });
 const { OpenAI } = require('openai');
 const openai = new OpenAI({ key: process.env.OPENAI_API_KEY });
-const { queryOpenAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI } = require('./openaiService'); 
-const { insertPlantTracker, getExistingPlantSnapshots, insertPlantSnapshot } = require('./dbService'); 
+const { queryOpenAI, processTaskListWithAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI } = require('./openaiService'); 
+const { getExistingTaskList, updateTaskManager, insertPlantTracker, getExistingPlantSnapshots, updatePlantSnapshot } = require('./dbService'); 
+
+async function processTaskList(record) {
+    try {
+        // STEP 1. Parse observation and add to plant_tracker
+        console.log(`Processing record: ${record.notes}`);
+
+        // get any existing task list: 
+        const existingTaskList = await getExistingTaskList(record, filter_by="location_id");
+        console.log("existing task list:", existingTaskList)
+
+        // process Task list from garden notes
+        const updatedTaskList = await processTaskListWithAI(record, existingTaskList);
+        console.log("updated task list:", updatedTaskList)
+        
+        await updateTaskManager(record, existingTaskList, updatedTaskList);
+        // data added to plant_tracker            
+        return updatedTaskList
+    } catch (error) {
+        console.error('Error processing garden notes for task manager:', record.id, error);
+    }
+}
 
 async function processGardenNotes(record) {
     try {
@@ -32,7 +53,7 @@ async function processPlantTrackerForSnapshot(record, plantInfos) {
         // Call the new function to process garden notes
         const updatedSnapshots = await processPlantTrackerToPlantSnapshotAI(plantInfos, existingSnapshots);
         
-        await insertPlantSnapshot(record, existingSnapshots, updatedSnapshots);
+        await updatePlantSnapshot(record, existingSnapshots, updatedSnapshots);
         // data added to plant_tracker            
         return null
     } catch (error) {
@@ -40,5 +61,5 @@ async function processPlantTrackerForSnapshot(record, plantInfos) {
     }
 }
 
-module.exports = { processGardenNotes, processPlantTrackerForSnapshot };
+module.exports = { processTaskList, processGardenNotes, processPlantTrackerForSnapshot };
 
