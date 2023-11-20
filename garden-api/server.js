@@ -94,25 +94,29 @@ app.get('/api/plant-snapshots', async (req, res) => {
 app.get('/api/tasks', async (req, res) => {
     try {
         const { area, bed } = req.query;
-        // Assuming you have a way to map area and bed to location_id
+        console.log(`Looking for tasks with area: ${area}, bed: ${bed}`); // Debugging log
+
         const locationIdQuery = 'SELECT id FROM garden_locations WHERE area = $1 AND bed = $2';
         const locationResult = await pool.query(locationIdQuery, [area, bed]);
 
         if (locationResult.rows.length === 0) {
+            console.error('Location not found for area:', area, 'bed:', bed); // Debugging log
             return res.status(404).json({ message: 'Location not found' });
         }
 
         const locationId = locationResult.rows[0].id;
+        console.log(`Found locationId: ${locationId}`); // Debugging log
 
         const tasksQuery = 'SELECT * FROM task_manager WHERE location_id = $1';
         const tasksResult = await pool.query(tasksQuery, [locationId]);
         
         res.json(tasksResult.rows);
     } catch (err) {
-        console.error(err.message);
+        console.error('Server Error', err.message); // More informative error log
         res.status(500).send('Server Error');
     }
 });
+
 
 
 // POST endpoint to add an entry to the plant_tracker table
@@ -164,10 +168,10 @@ app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
         const taskList = await processTaskList(record);
 
         // process garden notes record into plant_tracker table
-        // const plantInfos = await processGardenNotes(record);
+        const plantInfos = await processGardenNotes(record);
 
         // process new plant tracker table entrise to update plant snapshot
-        // await processPlantTrackerForSnapshot(record, plantInfos);
+        await processPlantTrackerForSnapshot(record, plantInfos);
 
         res.json({ message: 'databases updated successfully.' });
         

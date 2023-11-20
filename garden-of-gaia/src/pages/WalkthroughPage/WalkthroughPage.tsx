@@ -8,6 +8,8 @@ import Box from '@mui/material/Box';
 import TextField from '@mui/material/TextField';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Tooltip, Container } from '@mui/material';
 import InfoIcon from '@mui/icons-material/Info';
+import { Snackbar, Alert } from '@mui/material'; // Import Snackbar and Alert
+
 
 interface GardenLocation {
   id: number;
@@ -98,14 +100,86 @@ const WalkthroughPage: React.FC = () => {
 
     // fetch task list
     const [tasks, setTasks] = useState<any[]>([]);
+    const [displayColumns, setDisplayColumns] = useState({
+        assignee: false,
+        dueDate: false,
+        priority: false,
+      });
+    useEffect(() => {
+        const fetchTasks = async () => {
+          try {
+            const response = await fetch(`http://localhost:3001/api/tasks?area=${encodeURIComponent(selectedArea)}&bed=${encodeURIComponent(selectedBed)}`);
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            } else {
+              const data = await response.json();
+              setTasks(data);
+            }
+          } catch (error) {
+            console.error("Error fetching tasks:", error);
+          }
+        };
+      
+        if (selectedArea && selectedBed) {
+          fetchTasks();
+        }
+      }, [selectedArea, selectedBed]);
+
+      useEffect(() => {
+        // Check which columns have non-empty values
+        const columnsToShow = tasks.reduce(
+          (cols, task) => {
+            return {
+              assignee: cols.assignee || !!task.assignee,
+              dueDate: cols.dueDate || !!task.due_date,
+              priority: cols.priority || !!task.priority,
+            };
+          },
+          { assignee: false, dueDate: false, priority: false }
+        );
+        setDisplayColumns(columnsToShow);
+      }, [tasks]);
+
+    // get plant snapshots function
+    const fetchPlantSnapshots = async () => {
+        // Logic to fetch plant snapshots
+        try {
+            const response = await fetch(`http://localhost:3001/api/plant-snapshots?area=${encodeURIComponent(selectedArea)}&bed=${encodeURIComponent(selectedBed)}`);
+            if (!response.ok) throw new Error('Failed to fetch plant snapshots');
+            const data = await response.json();
+            setPlantSnapshots(data);
+        } catch (error) {
+            console.error('Error fetching plant snapshots:', error);
+        }
+    };
+
+    // get tasks function
+    const fetchTasks = async () => {
+        // Logic to fetch tasks
+        try {
+            const response = await fetch(`http://localhost:3001/api/tasks?area=${encodeURIComponent(selectedArea)}&bed=${encodeURIComponent(selectedBed)}`);
+            if (!response.ok) throw new Error('Failed to fetch tasks');
+            const data = await response.json();
+            setTasks(data);
+        } catch (error) {
+            console.error('Error fetching tasks:', error);
+        }
+    };
+
+    // useEffect hooks to call fetchPlantSnapshots and fetchTasks
     useEffect(() => {
         if (selectedArea && selectedBed) {
-            fetch(`http://localhost:3001/api/tasks?area=${selectedArea}&bed=${selectedBed}`)
-                .then(response => response.json())
-                .then(data => setTasks(data))
-                .catch(error => console.error('Error fetching tasks:', error));
+            fetchPlantSnapshots();
+            fetchTasks();
         }
     }, [selectedArea, selectedBed]);
+
+    const handleRefresh = () => {
+        fetchPlantSnapshots();
+        fetchTasks();
+    };
+
+    const [snackbarOpen, setSnackbarOpen] = useState(false); // State to control Snackbar
 
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -137,10 +211,12 @@ const WalkthroughPage: React.FC = () => {
         });
 
         try {
-            await fetch('http://localhost:3001/api/area-tracker-raw', {
+            const response = await fetch('http://localhost:3001/api/area-tracker-raw', {
                 method: 'POST',
                 body: formData, // FormData is used for file upload
             });
+
+            setSnackbarOpen(true);
     
             // Find the next index based on the selected bed
             const currentIndex = gardenLocations.findIndex(location => 
@@ -159,44 +235,66 @@ const WalkthroughPage: React.FC = () => {
             console.error('Error submitting walkthrough form:', error);
         }
     };
-    
 
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false); // Close the Snackbar
+    };
+
+    
     if (currentLocationIndex >= gardenLocations.length) {
         return <div>Walkthrough complete!</div>;
     }
 
     return (
-        <Box sx={{
-            padding: 0.5, // Adds padding around the content
-            maxWidth: '800px', // Sets a max-width for the container
-            margin: 'auto', // Centers the container
-          }}>
-            <h1>Garden Walkthrough</h1>
+        <Container maxWidth="md" sx={{ marginTop: 4 }}>
+            <Typography variant="h3" gutterBottom component="div">
+                Garden Walkthrough
+            </Typography>
+            <Typography variant="subtitle1" gutterBottom component="div">
+                Follow the steps to record your observations for each area and bed in the garden.
+            </Typography>
+            
             <form onSubmit={handleSubmit}>
-                {/* Area Dropdown */}
-                <Select
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="subtitle1" sx={{ width: 'auto', marginRight: 2 }}>
+                    Area:
+                    </Typography>
+                    <Select
                     value={selectedArea}
                     onChange={(e) => setSelectedArea(e.target.value)}
+                    displayEmpty
                     fullWidth
-                    margin="dense"
-                >
+                    renderValue={selectedArea !== '' ? undefined : () => <em>Area</em>}
+                    >
+                    <MenuItem value="" disabled>Select Area</MenuItem>
                     {uniqueAreas.map(area => (
                         <MenuItem key={area} value={area}>{area}</MenuItem>
                     ))}
-                </Select>
+                    </Select>
+                </Box>
 
-                {/* Bed Dropdown */}
-                <Select
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="subtitle1" sx={{ width: 'auto', marginRight: 2 }}>
+                    Bed:
+                    </Typography>
+                    <Select
                     value={selectedBed}
                     onChange={(e) => setSelectedBed(e.target.value)}
+                    displayEmpty
                     fullWidth
-                    margin="dense"
                     disabled={!selectedArea}
-                >
+                    renderValue={selectedBed !== '' ? undefined : () => <em>Bed</em>}
+                    >
+                    <MenuItem value="" disabled>Select Bed</MenuItem>
                     {bedsForSelectedArea.map(bed => (
                         <MenuItem key={bed} value={bed}>{bed}</MenuItem>
                     ))}
-                </Select>
+                    </Select>
+                </Box>
+            </Box>
+            
+            <Box sx={{ marginBottom: 2 }}>
                 <TextField
                     label="Your Name"
                     value={username}
@@ -213,92 +311,104 @@ const WalkthroughPage: React.FC = () => {
                     multiline
                     rows={4}
                 />
-                {/* <DateTimePicker
-                    label="Date and Time"
-                    value={selectedDate}
-                    onChange={handleDateChange}
-                    renderInput={(params: TextFieldProps) => <TextField {...params} fullWidth margin="normal" />}
-                /> */}
-                <TextField
-                    label="Current Location"
-                    value={autoFilledLocation}
-                    margin="normal"
-                    fullWidth
-                    InputProps={{
-                        readOnly: true,
-                    }}
-                />
-                <input
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    id="icon-button-file"
-                    type="file"
-                    onChange={handleImageChange}
-                />
-                <label htmlFor="icon-button-file">
-                    <IconButton color="primary" aria-label="upload picture" component="span">
-                        <PhotoCamera />
-                    </IconButton>
-                </label>
-                {image && <p>Image selected: {image.name}</p>}
-                <br />
-                <Button type="submit" variant="contained" color="primary">
-                    {currentLocationIndex < gardenLocations.length - 1 ? 'Submit' : 'Submit'}
-                </Button>
-                <br />
-                {/* Display plant snapshots */}
-                <TableContainer component={Paper} style={{ marginTop: '20px' }}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell><b>Plant Name</b></TableCell>
-                                <TableCell><b>Notes</b></TableCell>
-                                <TableCell><b>Status</b></TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {plantSnapshots.map((snapshot) => (
-                                <TableRow key={snapshot.id}>
-                                    <TableCell>{snapshot.plant_name}</TableCell>
-                                    <TableCell>{snapshot.notes}</TableCell>
-                                    <TableCell style={{ fontWeight: 'bold' }}>
-                                        {snapshot.plant_status}
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                {/* Display active task list */}
-                <TableContainer component={Paper} style={{ marginTop: '20px' }}>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell><b>Task Description</b></TableCell>
-                                <TableCell><b>Status</b></TableCell>
-                                {/* Add more headers if needed */}
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {tasks.map((task) => (
-                                <TableRow key={task.id}>
-                                    <TableCell>{task.task_description}</TableCell>
-                                    <TableCell style={{ fontWeight: task.status === 'completed' ? 'bold' : 'normal', color: task.status === 'completed' ? 'green' : 'black' }}>
-                                        {task.status}
-                                    </TableCell>
-                                    {/* Add more cells if needed */}
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-            </form>
-            <br />
-            <br />
-            <br />
-            <br />
-        </Box>
-    );
-};
+                </Box>
+    
+            <Box sx={{ marginBottom: 0 }}>
+              <input
+                accept="image/*"
+                style={{ display: 'none' }}
+                id="icon-button-file"
+                type="file"
+                onChange={handleImageChange}
+              />
+              <label htmlFor="icon-button-file">
+                <IconButton color="primary" aria-label="upload picture" component="span">
+                  <PhotoCamera />
+                </IconButton>
+              </label>
+              {image && <Typography variant="caption">Image selected: {image.name}</Typography>}
+            </Box>
+    
+            <Button type="submit" variant="contained" color="primary" sx={{ marginTop: 0 }}>
+              {currentLocationIndex < gardenLocations.length - 1 ? 'Submit' : 'Submit'}
+            </Button>
+          </form>
 
-export default WalkthroughPage;
+          <Box sx={{ marginTop: 2 }}>
+                <Button variant="outlined" onClick={handleRefresh}>
+                    Refresh Tables
+                </Button>
+            </Box>
+          
+          <Box sx={{ marginTop: 2 }}>
+            <Typography variant="h5" gutterBottom component="div">
+              Plant Snapshots
+            </Typography>
+            <TableContainer component={Paper}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell><b>Plant Name</b></TableCell>
+                    <TableCell><b>Notes</b></TableCell>
+                    <TableCell><b>Status</b></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {plantSnapshots.map((snapshot) => (
+                    <TableRow key={snapshot.id}>
+                      <TableCell style={{ fontWeight: 'bold' }}>{snapshot.plant_name}</TableCell>
+                      <TableCell>{snapshot.notes}</TableCell>
+                      <TableCell>{snapshot.plant_status}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+    
+          <Box sx={{ marginTop: 4 }}>
+            <Typography variant="h5" gutterBottom component="div">
+                Tasks
+            </Typography>
+            <TableContainer component={Paper}>
+                <Table>
+                <TableHead>
+                    <TableRow>
+                    <TableCell><b>Task Description</b></TableCell>
+                    <TableCell><b>Status</b></TableCell>
+                    {displayColumns.assignee && <TableCell><b>Assignee</b></TableCell>}
+                    {displayColumns.dueDate && <TableCell><b>Due Date</b></TableCell>}
+                    {displayColumns.priority && <TableCell><b>Priority</b></TableCell>}
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {tasks.map((task) => (
+                    <TableRow key={task.id}>
+                        <TableCell>{task.task_description}</TableCell>
+                        <TableCell style={{ fontWeight: task.status === 'completed' ? 'bold' : 'normal', color: task.status === 'completed' ? 'green' : 'black' }}>
+                        {task.status}
+                        </TableCell>
+                        {displayColumns.assignee && <TableCell>{task.assignee || '-'}</TableCell>}
+                        {displayColumns.dueDate && <TableCell>{task.due_date || '-'}</TableCell>}
+                        {displayColumns.priority && <TableCell>{task.priority || '-'}</TableCell>}
+                    </TableRow>
+                    ))}
+                </TableBody>
+                </Table>
+            </TableContainer>
+          </Box>
+          <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={handleSnackbarClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: '100%' }}>
+                    Submission successful!
+                </Alert>
+            </Snackbar>
+        </Container>
+      );
+    };
+    
+    export default WalkthroughPage;

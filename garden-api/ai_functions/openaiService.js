@@ -155,7 +155,7 @@ async function processTaskListWithAI(record, existingTasks) {
             "type": "function",
             "function": {
                 "name": "update_task_manager",
-                "description": "A function that processes record notes and extracts tasks, including updating existing tasks. Each task includes a task ID (if it exists), task_description and status, and (if the info is there) due date, status, assignee, priority. Use the properties in parameters.",
+                "description": "A function that processes record notes and extracts tasks, including updating existing tasks. Each task includes a task ID (if it exists), task_description and status, and (if the info is there) due date, status, assignee, priority. Use the properties in parameters. Do NOT return location_id",
                 "parameters": {
                     "type": "object",
                     "properties": {
