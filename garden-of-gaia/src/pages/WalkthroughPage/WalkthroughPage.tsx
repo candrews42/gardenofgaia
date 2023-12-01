@@ -461,7 +461,7 @@ const WalkthroughPage: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell><b>Plant Name</b></TableCell>
-                    <TableCell><b>Notes</b></TableCell>
+                    <TableCell><b>Notes </b>(editable)</TableCell>
                     <TableCell><b>Status</b></TableCell>
                   </TableRow>
                 </TableHead>
@@ -520,7 +520,7 @@ const WalkthroughPage: React.FC = () => {
                 <Table>
                 <TableHead>
                     <TableRow>
-                    <TableCell><b>Task Description</b></TableCell>
+                    <TableCell><b>Task</b> (editable)</TableCell>
                     <TableCell><b>Status</b></TableCell>
                         {displayColumns.assignee && <TableCell><b>Assignee</b></TableCell>}
                         {displayColumns.dueDate && <TableCell><b>Due Date</b></TableCell>}
