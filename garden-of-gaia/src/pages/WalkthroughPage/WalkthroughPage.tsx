@@ -9,6 +9,7 @@ import TextField from '@mui/material/TextField';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Tooltip, Container } from '@mui/material';
 import InfoIcon from '@mui/icons-material/Info';
 import { Snackbar, Alert } from '@mui/material'; // Import Snackbar and Alert
+import DeleteIcon from '@mui/icons-material/Delete';
 
 
 interface GardenLocation {
@@ -187,6 +188,61 @@ const WalkthroughPage: React.FC = () => {
         fetchTasks();
     };
 
+    // deletable rows
+    const handleDeleteSnapshot = async (snapshotId: number) => {
+        try {
+            // Find the details of the snapshot to be deleted
+            const snapshotToDelete = plantSnapshots.find(snapshot => snapshot.id === snapshotId);
+            if (!snapshotToDelete) {
+                console.error('Error: Snapshot not found');
+                return;
+            }
+            
+    
+            // Prepare data for plant_tracker
+            const plantTrackerData = {
+                date: new Date().toISOString().slice(0, 10),
+                location_id: snapshotToDelete.location_id, // Assuming this field exists
+                plant_id: snapshotToDelete.plant_id, // Assuming this field exists
+                action_category: 'removal',
+                notes: 'removed from garden bed',
+                 // If applicable
+                plant_name: snapshotToDelete.plant_name // Use the plant name from the snapshot
+            };
+            console.log(plantTrackerData)
+    
+            // Add an entry to plant_tracker for the removal
+            const plantTrackerResponse = await fetch('http://localhost:3001/api/plant-tracker', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(plantTrackerData)
+            });
+    
+            if (!plantTrackerResponse.ok) {
+                throw new Error(`HTTP error! status: ${plantTrackerResponse.status}`);
+            }
+    
+            // Delete the snapshot
+            const deleteResponse = await fetch(`http://localhost:3001/api/plant-snapshots/${snapshotId}`, {
+                method: 'DELETE',
+            });
+    
+            if (!deleteResponse.ok) {
+                throw new Error(`HTTP error! status: ${deleteResponse.status}`);
+            }
+    
+            // Remove the snapshot from the state
+            setPlantSnapshots(plantSnapshots.filter(snapshot => snapshot.id !== snapshotId));
+            console.log(`Snapshot with id ${snapshotId} deleted.`);
+        } catch (error) {
+            console.error('Error in handleDeleteSnapshot:', error);
+        }
+    };
+    
+    
+
     // editable tables
     const handleEditStart = (rowId: number, column: string, value: any) => {
         setEditableCell({ rowId, column });
@@ -199,6 +255,7 @@ const WalkthroughPage: React.FC = () => {
         }
       };
 
+    
     const handleSubmitEdit = async () => {
         try {
             // Find the snapshot being edited
@@ -207,6 +264,16 @@ const WalkthroughPage: React.FC = () => {
                 console.error('Error: Snapshot not found');
                 return;
             }
+
+            // Find the location_id that matches both the selected area and bed
+            const selectedLocation = gardenLocations.find(location => 
+                location.area === selectedArea && location.bed === selectedBed
+                
+            );
+            if (!selectedLocation) {
+                console.error('Error: Location not found');
+                return;
+            }   
             
             // First update the plant_snapshot notes
             const response = await fetch('http://localhost:3001/api/update-plant-snapshot-notes', {
@@ -232,13 +299,14 @@ const WalkthroughPage: React.FC = () => {
             // Now add an entry to plant_tracker
             const plantTrackerData = {
                 date: new Date().toISOString().slice(0, 10),
-                location_id: editedSnapshot.location_id, // Assuming this is part of your snapshot
+                location_id: selectedLocation, // Assuming this is part of your snapshot
                 plant_id: editedSnapshot.plant_id, // Assuming this is part of your snapshot
                 action_category: 'manual',
                 notes: editableValue,
                 picture: editedSnapshot.picture, // If applicable
                 plant_name: editedSnapshot.plant_name // Use the plant name from the snapshot
             };
+            console.log("to be submitted", plantTrackerData)
 
             const plantTrackerResponse = await fetch('http://localhost:3001/api/plant-tracker', {
                 method: 'POST',
@@ -471,6 +539,15 @@ const WalkthroughPage: React.FC = () => {
                         {/* Status - Not Editable */}
                         <TableCell>
                             {snapshot.plant_status}
+                        </TableCell>
+                        <TableCell>
+                            <IconButton 
+                                aria-label="delete" 
+                                color="secondary" 
+                                onClick={() => handleDeleteSnapshot(snapshot.id)}
+                            >
+                                <DeleteIcon />
+                            </IconButton>
                         </TableCell>
                         </TableRow>
                     ))}

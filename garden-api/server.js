@@ -142,15 +142,27 @@ app.get('/api/tasks', async (req, res) => {
 // POST endpoint to add an entry to the plant_tracker table
 app.post('/api/plant-tracker', async (req, res) => {
     try {
-        const { date, location, plant_id, action, notes, picture } = req.body;
+        const { date, location_id, plant_id, action_category, notes, picture, plant_name } = req.body;
         const newEntry = await pool.query(
-            'INSERT INTO plant_tracker (date, location_id, plant_id, action_category, notes, picture) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [date, location, plant_id, action, notes, picture]
+            'INSERT INTO plant_tracker (date, location_id, plant_id, action_category, notes, picture, plant_name) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [date, location_id, plant_id, action_category, notes, picture, plant_name]
         );
         res.json(newEntry.rows[0]);
     } catch (err) {
         console.error(err.message);
         res.status(500).json({ error: err.message });
+    }
+});
+
+// DELETE endpoint to delete entry from plant-snapshots
+app.delete('/api/plant-snapshots/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM plant_snapshot WHERE id = $1', [id]);
+        res.status(200).json({ message: 'Snapshot deleted successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
     }
 });
 
