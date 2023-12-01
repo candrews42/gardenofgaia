@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
@@ -10,83 +10,121 @@ import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper
 import InfoIcon from '@mui/icons-material/Info';
 import { Snackbar, Alert } from '@mui/material'; // Import Snackbar and Alert
 import DeleteIcon from '@mui/icons-material/Delete';
-
-
-interface GardenLocation {
-  id: number;
-  area: string;
-  bed: string;
-}
+import useCurrentLocation from '../../utils/useCurrentLocation';
 
 const WalkthroughPage: React.FC = () => {
+    // input fields
     const [gardenLocations, setGardenLocations] = useState<GardenLocation[]>([]);
     const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
     const [notes, setNotes] = useState('');
     const [username, setUsername] = useState('');
     const [image, setImage] = useState<File | null>(null);
-    const [autoFilledLocation, setAutoFilledLocation] = useState('');
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
     const [selectedArea, setSelectedArea] = useState('');
     const [selectedBed, setSelectedBed] = useState('');
+    // for geolocation
+    const autoFilledLocation = useCurrentLocation();
+    // plant and task snapshots
+    const [plantSnapshots, setPlantSnapshots] = useState<any[]>([]);
+    const [tasks, setTasks] = useState<any[]>([]);
+    // table display columns
+    const [displayColumns, setDisplayColumns] = useState({
+        assignee: false,
+        dueDate: false,
+        priority: false,
+    });
     // for editable tables
     interface EditableCell {
         rowId: number | null;
         column: string | null;
-    }
+    };
     const [editableCell, setEditableCell] = useState<EditableCell>({ rowId: null, column: null });
     const [editableValue, setEditableValue] = useState('');
+    
+    // fetch data util
+    const fetchData = async (url: string, setData: React.Dispatch<React.SetStateAction<any[]>>) => {
+        try {
+            const response = await fetch(url);
+            if (!response.ok) throw new Error('Failed to fetch data');
+            const data = await response.json();
+            setData(data);
+        } catch (error) {
+            console.error(`Error fetching data from ${url}:`, error);
+        }
+    };
 
-
-    // get location
-    // get the current location
+    // fetch plantSnapshot and tasks for selected bed
     useEffect(() => {
-        navigator.geolocation.getCurrentPosition((position) => {
-        setAutoFilledLocation(`${position.coords.latitude}, ${position.coords.longitude}`);
-        }, (error) => {
-        console.error('Error obtaining location', error);
-        });
-    }, []);
+        if (selectedArea && selectedBed) {
+            const area = encodeURIComponent(selectedArea);
+            const bed = encodeURIComponent(selectedBed);
+            fetchData(`http://localhost:3001/api/plant-snapshots?area=${area}&bed=${bed}`, setPlantSnapshots);
+            fetchData(`http://localhost:3001/api/tasks?area=${area}&bed=${bed}`, setTasks);
+        }
+    }, [selectedArea, selectedBed]);
+
+    // understand columns to show
+    useEffect(() => {
+        const columnsToShow = tasks.reduce(
+            (cols, task) => ({
+                assignee: cols.assignee || !!task.assignee,
+                dueDate: cols.dueDate || !!task.due_date,
+                priority: cols.priority || !!task.priority,
+            }),
+            { assignee: false, dueDate: false, priority: false }
+        );
+        setDisplayColumns(columnsToShow);
+    }, [tasks]);
+
+    // refresh tables
+    const handleRefresh = () => {
+        if (selectedArea && selectedBed) {
+            const area = encodeURIComponent(selectedArea);
+            const bed = encodeURIComponent(selectedBed);
+            fetchData(`http://localhost:3001/api/plant-snapshots?area=${area}&bed=${bed}`, setPlantSnapshots);
+            fetchData(`http://localhost:3001/api/tasks?area=${area}&bed=${bed}`, setTasks);
+        }
+    };
 
     // get garden locations
+    interface GardenLocation {
+        id: number;
+        area: string;
+        bed: string;
+    }
     useEffect(() => {
-        fetch('http://localhost:3001/api/garden-locations')
-            .then(response => response.json())
-            .then((data: GardenLocation[]) => setGardenLocations(data))
-            .catch(error => console.error('Error fetching garden locations:', error));
-    }, []);
-
-    // Create a unique list of areas for the Area dropdown
-    const uniqueAreas = Array.from(new Set(gardenLocations.map(location => location.area)));
-    // When an area is selected, get unique beds for that area
-    const bedsForSelectedArea = Array.from(new Set(gardenLocations
-        .filter(location => location.area === selectedArea)
-        .map(location => location.bed)));
-
-    useEffect(() => {
-        fetch('http://localhost:3001/api/garden-locations')
-            .then(response => response.json())
-            .then((data: GardenLocation[]) => {
+        const fetchGardenLocations = async () => {
+            try {
+                const response = await fetch('http://localhost:3001/api/garden-locations');
+                const data = await response.json();
                 setGardenLocations(data);
+
+                // Set initial values for area and bed if data is available
                 if (data.length > 0) {
                     setSelectedArea(data[0].area);
                     setSelectedBed(data[0].bed);
                 }
-            })
-            .catch(error => console.error('Error fetching garden locations:', error));
+            } catch (error) {
+                console.error('Error fetching garden locations:', error);
+            }
+        };
+
+        fetchGardenLocations();
     }, []);
-   
-    
-    useEffect(() => {
-    fetch('http://localhost:3001/api/garden-locations')
-        .then(response => response.json())
-        .then((data: GardenLocation[]) => setGardenLocations(data))
-        .catch(error => console.error('Error fetching garden locations:', error));
-    }, []);
+
+    const uniqueAreas = useMemo(() => {
+        return Array.from(new Set(gardenLocations.map(location => location.area)));
+    }, [gardenLocations]);
+
+    const bedsForSelectedArea = useMemo(() => {
+        return Array.from(new Set(gardenLocations.filter(location => location.area === selectedArea).map(location => location.bed)));
+    }, [gardenLocations, selectedArea]);
 
     // handle image change
     const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        if (event.target.files && event.target.files[0]) {
-            setImage(event.target.files[0]);
+        const file = event.target.files?.[0];
+        if (file) {
+            setImage(file);
         }
     };
 
@@ -95,136 +133,41 @@ const WalkthroughPage: React.FC = () => {
     //     setSelectedDate(newDate);
     // };
 
-    // fetch plant snapshots 
-    const [plantSnapshots, setPlantSnapshots] = useState<any[]>([]); // Add a state for plant snapshots
-    // Fetch plant snapshots when the selected bed changes
-    useEffect(() => {
-        if (selectedArea && selectedBed) {
-            fetch(`http://localhost:3001/api/plant-snapshots?area=${selectedArea}&bed=${selectedBed}`)
-                .then(response => response.json())
-                .then(data => setPlantSnapshots(data))
-                .catch(error => console.error('Error fetching plant snapshots:', error));
+    const createPlantTrackerEntry = async (data: any) => {
+        const response = await fetch('http://localhost:3001/api/plant-tracker', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+    
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
-    }, [selectedArea, selectedBed]); // Dependency array includes selectedArea and selectedBed
-
-    // fetch task list
-    const [tasks, setTasks] = useState<any[]>([]);
-    const [displayColumns, setDisplayColumns] = useState({
-        assignee: false,
-        dueDate: false,
-        priority: false,
-      });
-    useEffect(() => {
-        const fetchTasks = async () => {
-          try {
-            const response = await fetch(`http://localhost:3001/api/tasks?area=${encodeURIComponent(selectedArea)}&bed=${encodeURIComponent(selectedBed)}`);
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            } else {
-              const data = await response.json();
-              setTasks(data);
-            }
-          } catch (error) {
-            console.error("Error fetching tasks:", error);
-          }
-        };
-      
-        if (selectedArea && selectedBed) {
-          fetchTasks();
-        }
-      }, [selectedArea, selectedBed]);
-
-      useEffect(() => {
-        // Check which columns have non-empty values
-        const columnsToShow = tasks.reduce(
-          (cols, task) => {
-            return {
-              assignee: cols.assignee || !!task.assignee,
-              dueDate: cols.dueDate || !!task.due_date,
-              priority: cols.priority || !!task.priority,
-            };
-          },
-          { assignee: false, dueDate: false, priority: false }
-        );
-        setDisplayColumns(columnsToShow);
-      }, [tasks]);
-
-    // get plant snapshots function
-    const fetchPlantSnapshots = async () => {
-        // Logic to fetch plant snapshots
-        try {
-            const response = await fetch(`http://localhost:3001/api/plant-snapshots?area=${encodeURIComponent(selectedArea)}&bed=${encodeURIComponent(selectedBed)}`);
-            if (!response.ok) throw new Error('Failed to fetch plant snapshots');
-            const data = await response.json();
-            setPlantSnapshots(data);
-        } catch (error) {
-            console.error('Error fetching plant snapshots:', error);
-        }
+    
+        return response.json();
     };
-
-    // get tasks function
-    const fetchTasks = async () => {
-        // Logic to fetch tasks
-        try {
-            const response = await fetch(`http://localhost:3001/api/tasks?area=${encodeURIComponent(selectedArea)}&bed=${encodeURIComponent(selectedBed)}`);
-            if (!response.ok) throw new Error('Failed to fetch tasks');
-            const data = await response.json();
-            setTasks(data);
-        } catch (error) {
-            console.error('Error fetching tasks:', error);
-        }
-    };
-
-    // useEffect hooks to call fetchPlantSnapshots and fetchTasks
-    useEffect(() => {
-        if (selectedArea && selectedBed) {
-            fetchPlantSnapshots();
-            fetchTasks();
-        }
-    }, [selectedArea, selectedBed]);
-
-    const handleRefresh = () => {
-        fetchPlantSnapshots();
-        fetchTasks();
-    };
-
-    // deletable rows
+    
     const handleDeleteSnapshot = async (snapshotId: number) => {
         try {
-            // Find the details of the snapshot to be deleted
             const snapshotToDelete = plantSnapshots.find(snapshot => snapshot.id === snapshotId);
             if (!snapshotToDelete) {
                 console.error('Error: Snapshot not found');
                 return;
             }
-            
     
-            // Prepare data for plant_tracker
             const plantTrackerData = {
                 date: new Date().toISOString().slice(0, 10),
-                location_id: snapshotToDelete.location_id, // Assuming this field exists
-                plant_id: snapshotToDelete.plant_id, // Assuming this field exists
+                location_id: snapshotToDelete.location_id,
+                plant_id: snapshotToDelete.plant_id,
                 action_category: 'removal',
                 notes: 'removed from garden bed',
-                 // If applicable
-                plant_name: snapshotToDelete.plant_name // Use the plant name from the snapshot
+                plant_name: snapshotToDelete.plant_name
             };
-            console.log(plantTrackerData)
     
-            // Add an entry to plant_tracker for the removal
-            const plantTrackerResponse = await fetch('http://localhost:3001/api/plant-tracker', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(plantTrackerData)
-            });
+            await createPlantTrackerEntry(plantTrackerData);
     
-            if (!plantTrackerResponse.ok) {
-                throw new Error(`HTTP error! status: ${plantTrackerResponse.status}`);
-            }
-    
-            // Delete the snapshot
             const deleteResponse = await fetch(`http://localhost:3001/api/plant-snapshots/${snapshotId}`, {
                 method: 'DELETE',
             });
@@ -233,14 +176,64 @@ const WalkthroughPage: React.FC = () => {
                 throw new Error(`HTTP error! status: ${deleteResponse.status}`);
             }
     
-            // Remove the snapshot from the state
             setPlantSnapshots(plantSnapshots.filter(snapshot => snapshot.id !== snapshotId));
-            console.log(`Snapshot with id ${snapshotId} deleted.`);
         } catch (error) {
             console.error('Error in handleDeleteSnapshot:', error);
         }
     };
     
+    const handleSubmitEdit = async () => {
+        try {
+            const editedSnapshot = plantSnapshots.find(snapshot => snapshot.id === editableCell.rowId);
+            if (!editedSnapshot) {
+                console.error('Error: Snapshot not found');
+                return;
+            }
+    
+            const selectedLocation = gardenLocations.find(location => 
+                location.area === selectedArea && location.bed === selectedBed
+            );
+            if (!selectedLocation) {
+                console.error('Error: Location not found');
+                return;
+            }   
+    
+            const response = await fetch('http://localhost:3001/api/update-plant-snapshot-notes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    snapshotId: editableCell.rowId, 
+                    newNotes: editableValue 
+                }),
+            });
+    
+            const updatedSnapshot = await response.json();
+    
+            const updatedSnapshots = plantSnapshots.map(snapshot =>
+                snapshot.id === editableCell.rowId ? { ...snapshot, notes: updatedSnapshot.notes } : snapshot
+            );
+            setPlantSnapshots(updatedSnapshots);
+    
+            const plantTrackerData = {
+                date: new Date().toISOString().slice(0, 10),
+                location_id: selectedLocation,
+                plant_id: editedSnapshot.plant_id,
+                action_category: 'manual',
+                notes: editableValue,
+                picture: editedSnapshot.picture,
+                plant_name: editedSnapshot.plant_name
+            };
+    
+            await createPlantTrackerEntry(plantTrackerData);
+        } catch (error) {
+            console.error('Error in handleEditSubmit:', error);
+        }
+    
+        setEditableCell({ rowId: null, column: null });
+        setEditableValue('');
+    };
     
 
     // editable tables
@@ -254,87 +247,6 @@ const WalkthroughPage: React.FC = () => {
           handleSubmitEdit();
         }
       };
-
-    
-    const handleSubmitEdit = async () => {
-        try {
-            // Find the snapshot being edited
-            const editedSnapshot = plantSnapshots.find(snapshot => snapshot.id === editableCell.rowId);
-            if (!editedSnapshot) {
-                console.error('Error: Snapshot not found');
-                return;
-            }
-
-            // Find the location_id that matches both the selected area and bed
-            const selectedLocation = gardenLocations.find(location => 
-                location.area === selectedArea && location.bed === selectedBed
-                
-            );
-            if (!selectedLocation) {
-                console.error('Error: Location not found');
-                return;
-            }   
-            
-            // First update the plant_snapshot notes
-            const response = await fetch('http://localhost:3001/api/update-plant-snapshot-notes', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    snapshotId: editableCell.rowId, 
-                    newNotes: editableValue 
-                }),
-            });
-    
-            const updatedSnapshot = await response.json();
-            console.log('Updated snapshot:', updatedSnapshot);
-    
-            // Update the plantSnapshots state with the new notes
-            const updatedSnapshots = plantSnapshots.map(snapshot =>
-                snapshot.id === editableCell.rowId ? { ...snapshot, notes: updatedSnapshot.notes } : snapshot
-            );
-            setPlantSnapshots(updatedSnapshots);
-    
-            // Now add an entry to plant_tracker
-            const plantTrackerData = {
-                date: new Date().toISOString().slice(0, 10),
-                location_id: selectedLocation, // Assuming this is part of your snapshot
-                plant_id: editedSnapshot.plant_id, // Assuming this is part of your snapshot
-                action_category: 'manual',
-                notes: editableValue,
-                picture: editedSnapshot.picture, // If applicable
-                plant_name: editedSnapshot.plant_name // Use the plant name from the snapshot
-            };
-            console.log("to be submitted", plantTrackerData)
-
-            const plantTrackerResponse = await fetch('http://localhost:3001/api/plant-tracker', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(plantTrackerData)
-            });
-    
-            if (!plantTrackerResponse.ok) {
-                throw new Error(`HTTP error! status: ${plantTrackerResponse.status}`);
-            }
-    
-            const newPlantTrackerEntry = await plantTrackerResponse.json();
-            console.log('New plant tracker entry added:', newPlantTrackerEntry);
-            // Optionally update state or UI based on the new entry
-    
-        } catch (error) {
-            console.error('Error in handleEditSubmit:', error);
-        }
-    
-        // Reset the editable states
-        setEditableCell({ rowId: null, column: null });
-        setEditableValue('');
-    };
-    
-      
-      
 
     // submit
     const [snackbarOpen, setSnackbarOpen] = useState(false); // State to control Snackbar
