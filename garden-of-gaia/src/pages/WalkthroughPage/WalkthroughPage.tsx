@@ -182,7 +182,7 @@ const WalkthroughPage: React.FC = () => {
         }
     };
     
-    const handleSubmitEdit = async () => {
+    const handleSubmitEditSnapshot = async () => {
         try {
             const editedSnapshot = plantSnapshots.find(snapshot => snapshot.id === editableCell.rowId);
             if (!editedSnapshot) {
@@ -234,6 +234,22 @@ const WalkthroughPage: React.FC = () => {
         setEditableCell({ rowId: null, column: null });
         setEditableValue('');
     };
+
+    const handleDeleteTask = async (taskId: number) => {
+        try {
+            const deleteResponse = await fetch(`http://localhost:3001/api/tasks/${taskId}`, {
+                method: 'DELETE',
+            });
+    
+            if (!deleteResponse.ok) {
+                throw new Error(`HTTP error! status: ${deleteResponse.status}`);
+            }
+    
+            setTasks(tasks.filter(task => task.id !== taskId));
+        } catch (error) {
+            console.error('Error in handleDeleteTask:', error);
+        }
+    };
     
 
     // editable tables
@@ -244,7 +260,7 @@ const WalkthroughPage: React.FC = () => {
       
     const handleKeyDown = (event: React.KeyboardEvent) => {
         if (event.key === 'Enter') {
-          handleSubmitEdit();
+          handleSubmitEditSnapshot();
         }
       };
 
@@ -494,6 +510,15 @@ const WalkthroughPage: React.FC = () => {
                         {displayColumns.assignee && <TableCell>{task.assignee || '-'}</TableCell>}
                         {displayColumns.dueDate && <TableCell>{task.due_date || '-'}</TableCell>}
                         {displayColumns.priority && <TableCell>{task.priority || '-'}</TableCell>}
+                        <TableCell>
+                            <IconButton 
+                                aria-label="delete" 
+                                color="secondary" 
+                                onClick={() => handleDeleteTask(task.id)}
+                            >
+                                <DeleteIcon />
+                            </IconButton>
+                        </TableCell>
                     </TableRow>
                     ))}
                 </TableBody>

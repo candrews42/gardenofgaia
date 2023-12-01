@@ -166,6 +166,18 @@ app.delete('/api/plant-snapshots/:id', async (req, res) => {
     }
 });
 
+// DELETE endpoint to delete entry from task_manager
+app.delete('/api/tasks/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        await pool.query('DELETE FROM task_manager WHERE id = $1', [id]);
+        res.status(200).json({ message: 'Task deleted successfully' });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
 // upload to area_tracker_raw
 const multer = require('multer');
 const sharp = require('sharp');
