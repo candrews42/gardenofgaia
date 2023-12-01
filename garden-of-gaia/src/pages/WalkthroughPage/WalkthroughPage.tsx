@@ -27,6 +27,14 @@ const WalkthroughPage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
     const [selectedArea, setSelectedArea] = useState('');
     const [selectedBed, setSelectedBed] = useState('');
+    // for editable tables
+    interface EditableCell {
+        rowId: number | null;
+        column: string | null;
+    }
+    const [editableCell, setEditableCell] = useState<EditableCell>({ rowId: null, column: null });
+    const [editableValue, setEditableValue] = useState('');
+
 
     // get location
     // get the current location
@@ -179,8 +187,89 @@ const WalkthroughPage: React.FC = () => {
         fetchTasks();
     };
 
-    const [snackbarOpen, setSnackbarOpen] = useState(false); // State to control Snackbar
+    // editable tables
+    const handleEditStart = (rowId: number, column: string, value: any) => {
+        setEditableCell({ rowId, column });
+        setEditableValue(value);
+      };
+      
+    const handleKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === 'Enter') {
+          handleSubmitEdit();
+        }
+      };
 
+    const handleSubmitEdit = async () => {
+        try {
+            // Find the snapshot being edited
+            const editedSnapshot = plantSnapshots.find(snapshot => snapshot.id === editableCell.rowId);
+            if (!editedSnapshot) {
+                console.error('Error: Snapshot not found');
+                return;
+            }
+            
+            // First update the plant_snapshot notes
+            const response = await fetch('http://localhost:3001/api/update-plant-snapshot-notes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    snapshotId: editableCell.rowId, 
+                    newNotes: editableValue 
+                }),
+            });
+    
+            const updatedSnapshot = await response.json();
+            console.log('Updated snapshot:', updatedSnapshot);
+    
+            // Update the plantSnapshots state with the new notes
+            const updatedSnapshots = plantSnapshots.map(snapshot =>
+                snapshot.id === editableCell.rowId ? { ...snapshot, notes: updatedSnapshot.notes } : snapshot
+            );
+            setPlantSnapshots(updatedSnapshots);
+    
+            // Now add an entry to plant_tracker
+            const plantTrackerData = {
+                date: new Date().toISOString().slice(0, 10),
+                location_id: editedSnapshot.location_id, // Assuming this is part of your snapshot
+                plant_id: editedSnapshot.plant_id, // Assuming this is part of your snapshot
+                action_category: 'manual',
+                notes: editableValue,
+                picture: editedSnapshot.picture, // If applicable
+                plant_name: editedSnapshot.plant_name // Use the plant name from the snapshot
+            };
+
+            const plantTrackerResponse = await fetch('http://localhost:3001/api/plant-tracker', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(plantTrackerData)
+            });
+    
+            if (!plantTrackerResponse.ok) {
+                throw new Error(`HTTP error! status: ${plantTrackerResponse.status}`);
+            }
+    
+            const newPlantTrackerEntry = await plantTrackerResponse.json();
+            console.log('New plant tracker entry added:', newPlantTrackerEntry);
+            // Optionally update state or UI based on the new entry
+    
+        } catch (error) {
+            console.error('Error in handleEditSubmit:', error);
+        }
+    
+        // Reset the editable states
+        setEditableCell({ rowId: null, column: null });
+        setEditableValue('');
+    };
+    
+      
+      
+
+    // submit
+    const [snackbarOpen, setSnackbarOpen] = useState(false); // State to control Snackbar
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
@@ -354,14 +443,39 @@ const WalkthroughPage: React.FC = () => {
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {plantSnapshots.map((snapshot) => (
-                    <TableRow key={snapshot.id}>
-                      <TableCell style={{ fontWeight: 'bold' }}>{snapshot.plant_name}</TableCell>
-                      <TableCell>{snapshot.notes}</TableCell>
-                      <TableCell>{snapshot.plant_status}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
+                    {plantSnapshots.map((snapshot) => (
+                        <TableRow key={snapshot.id}>
+                        {/* Plant Name - Not Editable */}
+                        <TableCell style={{ fontWeight: 'bold' }}>
+                            {snapshot.plant_name}
+                        </TableCell>
+
+                        {/* Notes - Editable */}
+                        <TableCell onDoubleClick={() => handleEditStart(snapshot.id, 'notes', snapshot.notes)}>
+                            {editableCell.rowId === snapshot.id && editableCell.column === 'notes' ? (
+                            <TextField
+                                type="text"
+                                multiline
+                                rows={4}
+                                fullWidth
+                                value={editableCell.rowId === snapshot.id ? editableValue : snapshot.notes}
+                                onChange={(e) => setEditableValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                autoFocus
+                            />
+                            ) : (
+                            snapshot.notes
+                            )}
+                        </TableCell>
+
+                        {/* Status - Not Editable */}
+                        <TableCell>
+                            {snapshot.plant_status}
+                        </TableCell>
+                        </TableRow>
+                    ))}
+                    </TableBody>
+
               </Table>
             </TableContainer>
           </Box>
@@ -370,15 +484,15 @@ const WalkthroughPage: React.FC = () => {
             <Typography variant="h5" gutterBottom component="div">
                 Tasks
             </Typography>
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{ marginBottom: 10 }}>
                 <Table>
                 <TableHead>
                     <TableRow>
                     <TableCell><b>Task Description</b></TableCell>
                     <TableCell><b>Status</b></TableCell>
-                    {displayColumns.assignee && <TableCell><b>Assignee</b></TableCell>}
-                    {displayColumns.dueDate && <TableCell><b>Due Date</b></TableCell>}
-                    {displayColumns.priority && <TableCell><b>Priority</b></TableCell>}
+                        {displayColumns.assignee && <TableCell><b>Assignee</b></TableCell>}
+                        {displayColumns.dueDate && <TableCell><b>Due Date</b></TableCell>}
+                        {displayColumns.priority && <TableCell><b>Priority</b></TableCell>}
                     </TableRow>
                 </TableHead>
                 <TableBody>
@@ -402,6 +516,7 @@ const WalkthroughPage: React.FC = () => {
                 autoHideDuration={6000}
                 onClose={handleSnackbarClose}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                sx={{ marginBottom: 3 }}
             >
                 <Alert onClose={handleSnackbarClose} severity="success" sx={{ width: '100%' }}>
                     Submission successful!

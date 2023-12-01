@@ -90,6 +90,26 @@ app.get('/api/plant-snapshots', async (req, res) => {
     }
 });
 
+// route to update notes in plant_snapshot
+app.post('/api/update-plant-snapshot-notes', async (req, res) => {
+    try {
+        const { snapshotId, newNotes } = req.body;
+
+        const updateQuery = 'UPDATE plant_snapshot SET notes = $1 WHERE id = $2 RETURNING *';
+        console.log(updateQuery)
+        const updateResult = await pool.query(updateQuery, [newNotes, snapshotId]);
+
+        if (updateResult.rows.length === 0) {
+            return res.status(404).json({ message: 'Snapshot not found' });
+        }
+
+        res.json(updateResult.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // Route to get task entries for a specific area and bed
 app.get('/api/tasks', async (req, res) => {
     try {
