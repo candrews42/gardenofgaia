@@ -182,58 +182,85 @@ const WalkthroughPage: React.FC = () => {
         }
     };
     
-    const handleSubmitEditSnapshot = async () => {
-        try {
-            const editedSnapshot = plantSnapshots.find(snapshot => snapshot.id === editableCell.rowId);
-            if (!editedSnapshot) {
-                console.error('Error: Snapshot not found');
-                return;
+    const handleSubmitEdit = async () => {
+        if (editableCell.column === 'notes') {
+            try {
+                const editedSnapshot = plantSnapshots.find(snapshot => snapshot.id === editableCell.rowId);
+                if (!editedSnapshot) {
+                    console.error('Error: Snapshot not found');
+                    return;
+                }
+        
+                const selectedLocation = gardenLocations.find(location => 
+                    location.area === selectedArea && location.bed === selectedBed
+                );
+                if (!selectedLocation) {
+                    console.error('Error: Location not found');
+                    return;
+                }   
+        
+                const response = await fetch('http://localhost:3001/api/update-plant-snapshot-notes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        snapshotId: editableCell.rowId, 
+                        newNotes: editableValue 
+                    }),
+                });
+        
+                const updatedSnapshot = await response.json();
+        
+                const updatedSnapshots = plantSnapshots.map(snapshot =>
+                    snapshot.id === editableCell.rowId ? { ...snapshot, notes: updatedSnapshot.notes } : snapshot
+                );
+                setPlantSnapshots(updatedSnapshots);
+        
+                const plantTrackerData = {
+                    date: new Date().toISOString().slice(0, 10),
+                    location_id: selectedLocation,
+                    plant_id: editedSnapshot.plant_id,
+                    action_category: 'manual',
+                    notes: editableValue,
+                    picture: editedSnapshot.picture,
+                    plant_name: editedSnapshot.plant_name
+                };
+        
+                await createPlantTrackerEntry(plantTrackerData);
+            } catch (error) {
+                console.error('Error in handleEditSubmit:', error);
             }
-    
-            const selectedLocation = gardenLocations.find(location => 
-                location.area === selectedArea && location.bed === selectedBed
-            );
-            if (!selectedLocation) {
-                console.error('Error: Location not found');
-                return;
-            }   
-    
-            const response = await fetch('http://localhost:3001/api/update-plant-snapshot-notes', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ 
-                    snapshotId: editableCell.rowId, 
-                    newNotes: editableValue 
-                }),
-            });
-    
-            const updatedSnapshot = await response.json();
-    
-            const updatedSnapshots = plantSnapshots.map(snapshot =>
-                snapshot.id === editableCell.rowId ? { ...snapshot, notes: updatedSnapshot.notes } : snapshot
-            );
-            setPlantSnapshots(updatedSnapshots);
-    
-            const plantTrackerData = {
-                date: new Date().toISOString().slice(0, 10),
-                location_id: selectedLocation,
-                plant_id: editedSnapshot.plant_id,
-                action_category: 'manual',
-                notes: editableValue,
-                picture: editedSnapshot.picture,
-                plant_name: editedSnapshot.plant_name
-            };
-    
-            await createPlantTrackerEntry(plantTrackerData);
-        } catch (error) {
-            console.error('Error in handleEditSubmit:', error);
-        }
-    
-        setEditableCell({ rowId: null, column: null });
-        setEditableValue('');
-    };
+            } else if (editableCell.column === 'task_description') {
+                console.log(editableValue)
+                try {
+                    const response = await fetch(`http://localhost:3001/api/tasks/${editableCell.rowId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ newTaskDescription: editableValue }),
+                    });
+                    console.log(response)
+        
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+        
+                    const updatedTask = await response.json();
+        
+                    const updatedTasks = tasks.map(task =>
+                        task.id === editableCell.rowId ? { ...task, task_description: updatedTask.task_description } : task
+                    );
+                    setTasks(updatedTasks);
+                } catch (error) {
+                    console.error('Error in handleEditSubmit:', error);
+                }
+            }
+        
+            setEditableCell({ rowId: null, column: null });
+            setEditableValue('');
+        };
 
     const handleDeleteTask = async (taskId: number) => {
         try {
@@ -260,7 +287,7 @@ const WalkthroughPage: React.FC = () => {
       
     const handleKeyDown = (event: React.KeyboardEvent) => {
         if (event.key === 'Enter') {
-          handleSubmitEditSnapshot();
+          handleSubmitEdit();
         }
       };
 
@@ -503,7 +530,19 @@ const WalkthroughPage: React.FC = () => {
                 <TableBody>
                     {tasks.map((task) => (
                     <TableRow key={task.id}>
-                        <TableCell>{task.task_description}</TableCell>
+                        <TableCell onDoubleClick={() => handleEditStart(task.id, 'task_description', task.task_description)}>
+                            {editableCell.rowId === task.id && editableCell.column === 'task_description' ? (
+                                <TextField
+                                    value={editableValue}
+                                    onChange={(e) => setEditableValue(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    autoFocus
+                                    fullWidth
+                                />
+                            ) : (
+                                task.task_description
+                            )}
+                        </TableCell>
                         <TableCell style={{ fontWeight: task.status === 'completed' ? 'bold' : 'normal', color: task.status === 'completed' ? 'green' : 'black' }}>
                         {task.status}
                         </TableCell>

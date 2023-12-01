@@ -110,6 +110,26 @@ app.post('/api/update-plant-snapshot-notes', async (req, res) => {
     }
 });
 
+// PUT endpoint to update task_description in task_manager
+app.put('/api/tasks/:id', async (req, res) => {
+    console.log(req.body)
+    try {
+        const { id } = req.params;
+        const { newTaskDescription } = req.body;
+        const updateTask = await pool.query(
+            'UPDATE task_manager SET task_description = $1 WHERE id = $2 RETURNING *',
+            [newTaskDescription, id]
+        );
+        if (updateTask.rowCount === 0) {
+            return res.status(404).json({ message: 'Task not found' });
+        }
+        res.json(updateTask.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server error');
+    }
+});
+
 // Route to get task entries for a specific area and bed
 app.get('/api/tasks', async (req, res) => {
     try {
