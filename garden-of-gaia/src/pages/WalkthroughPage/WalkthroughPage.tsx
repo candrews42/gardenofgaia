@@ -55,11 +55,12 @@ const WalkthroughPage: React.FC = () => {
 
     // fetch plantSnapshot and tasks for selected bed
     useEffect(() => {
-        if (selectedArea && selectedBed) {
-            const area = encodeURIComponent(selectedArea);
-            const bed = encodeURIComponent(selectedBed);
-            fetchData(`http://localhost:3001/api/plant-snapshots?area=${area}&bed=${bed}`, setPlantSnapshots);
-            fetchData(`http://localhost:3001/api/tasks?area=${area}&bed=${bed}`, setTasks);
+        if (selectedArea) {
+            const bed = selectedBed !== 'All Beds' ? encodeURIComponent(selectedBed) : null;
+            const bedQuery = bed ? `&bed=${bed}` : '';
+            const areaId = gardenLocations.find(location => location.area === selectedArea)?.area_id;
+            fetchData(`http://localhost:3001/api/plant-snapshots?area_id=${areaId}${bedQuery}`, setPlantSnapshots);
+            fetchData(`http://localhost:3001/api/tasks?area_id=${areaId}${bedQuery}`, setTasks);
         }
     }, [selectedArea, selectedBed]);
 
@@ -78,19 +79,21 @@ const WalkthroughPage: React.FC = () => {
 
     // refresh tables
     const handleRefresh = () => {
-        if (selectedArea && selectedBed) {
-            const area = encodeURIComponent(selectedArea);
-            const bed = encodeURIComponent(selectedBed);
-            fetchData(`http://localhost:3001/api/plant-snapshots?area=${area}&bed=${bed}`, setPlantSnapshots);
-            fetchData(`http://localhost:3001/api/tasks?area=${area}&bed=${bed}`, setTasks);
+        if (selectedArea) {
+            const bed = selectedBed !== 'All Beds' ? encodeURIComponent(selectedBed) : null;
+            const bedQuery = bed ? `&bed=${bed}` : '';
+            const areaId = gardenLocations.find(location => location.area === selectedArea)?.area_id;
+            fetchData(`http://localhost:3001/api/plant-snapshots?area_id=${areaId}${bedQuery}`, setPlantSnapshots);
+            fetchData(`http://localhost:3001/api/tasks?area_id=${areaId}${bedQuery}`, setTasks);
         }
-    };
+    }
 
     // get garden locations
     interface GardenLocation {
         id: number;
         area: string;
         bed: string;
+        area_id: number;
     }
     useEffect(() => {
         const fetchGardenLocations = async () => {
@@ -98,17 +101,17 @@ const WalkthroughPage: React.FC = () => {
                 const response = await fetch('http://localhost:3001/api/garden-locations');
                 const data = await response.json();
                 setGardenLocations(data);
-
+    
                 // Set initial values for area and bed if data is available
                 if (data.length > 0) {
                     setSelectedArea(data[0].area);
-                    setSelectedBed(data[0].bed);
+                    setSelectedBed('All Beds');
                 }
             } catch (error) {
                 console.error('Error fetching garden locations:', error);
             }
         };
-
+    
         fetchGardenLocations();
     }, []);
 
@@ -391,17 +394,17 @@ const WalkthroughPage: React.FC = () => {
                     Bed:
                     </Typography>
                     <Select
-                    value={selectedBed}
-                    onChange={(e) => setSelectedBed(e.target.value)}
-                    displayEmpty
-                    fullWidth
-                    disabled={!selectedArea}
-                    renderValue={selectedBed !== '' ? undefined : () => <em>Bed</em>}
+                        value={selectedBed}
+                        onChange={(e) => setSelectedBed(e.target.value)}
+                        displayEmpty
+                        fullWidth
+                        disabled={!selectedArea}
+                        renderValue={selectedBed !== '' ? undefined : () => <em>Bed</em>}
                     >
-                    <MenuItem value="" disabled>Select Bed</MenuItem>
-                    {bedsForSelectedArea.map(bed => (
-                        <MenuItem key={bed} value={bed}>{bed}</MenuItem>
-                    ))}
+                        <MenuItem value="All Beds">All Beds</MenuItem>
+                        {bedsForSelectedArea.map(bed => (
+                            <MenuItem key={bed} value={bed}>{bed}</MenuItem>
+                        ))}
                     </Select>
                 </Box>
             </Box>
@@ -460,6 +463,7 @@ const WalkthroughPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
+                    {selectedBed === "All Beds" && <TableCell><b>Bed</b></TableCell>}
                     <TableCell><b>Plant Name</b></TableCell>
                     <TableCell><b>Notes </b>(editable)</TableCell>
                     <TableCell><b>Status</b></TableCell>
@@ -468,42 +472,43 @@ const WalkthroughPage: React.FC = () => {
                 <TableBody>
                     {plantSnapshots.map((snapshot) => (
                         <TableRow key={snapshot.id}>
-                        {/* Plant Name - Not Editable */}
-                        <TableCell style={{ fontWeight: 'bold' }}>
-                            {snapshot.plant_name}
-                        </TableCell>
+                            {selectedBed === 'All Beds' && <TableCell>{snapshot.bed}</TableCell>}
+                            {/* Plant Name - Not Editable */}
+                            <TableCell style={{ fontWeight: 'bold' }}>
+                                {snapshot.plant_name}
+                            </TableCell>
 
-                        {/* Notes - Editable */}
-                        <TableCell onDoubleClick={() => handleEditStart(snapshot.id, 'notes', snapshot.notes)}>
-                            {editableCell.rowId === snapshot.id && editableCell.column === 'notes' ? (
-                            <TextField
-                                type="text"
-                                multiline
-                                rows={4}
-                                fullWidth
-                                value={editableCell.rowId === snapshot.id ? editableValue : snapshot.notes}
-                                onChange={(e) => setEditableValue(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                autoFocus
-                            />
-                            ) : (
-                            snapshot.notes
-                            )}
-                        </TableCell>
+                            {/* Notes - Editable */}
+                            <TableCell onDoubleClick={() => handleEditStart(snapshot.id, 'notes', snapshot.notes)}>
+                                {editableCell.rowId === snapshot.id && editableCell.column === 'notes' ? (
+                                <TextField
+                                    type="text"
+                                    multiline
+                                    rows={4}
+                                    fullWidth
+                                    value={editableCell.rowId === snapshot.id ? editableValue : snapshot.notes}
+                                    onChange={(e) => setEditableValue(e.target.value)}
+                                    onKeyDown={handleKeyDown}
+                                    autoFocus
+                                />
+                                ) : (
+                                snapshot.notes
+                                )}
+                            </TableCell>
 
-                        {/* Status - Not Editable */}
-                        <TableCell>
-                            {snapshot.plant_status}
-                        </TableCell>
-                        <TableCell>
-                            <IconButton 
-                                aria-label="delete" 
-                                color="secondary" 
-                                onClick={() => handleDeleteSnapshot(snapshot.id)}
-                            >
-                                <DeleteIcon />
-                            </IconButton>
-                        </TableCell>
+                            {/* Status - Not Editable */}
+                            <TableCell>
+                                {snapshot.plant_status}
+                            </TableCell>
+                            <TableCell>
+                                <IconButton 
+                                    aria-label="delete" 
+                                    color="secondary" 
+                                    onClick={() => handleDeleteSnapshot(snapshot.id)}
+                                >
+                                    <DeleteIcon />
+                                </IconButton>
+                            </TableCell>
                         </TableRow>
                     ))}
                     </TableBody>
@@ -520,16 +525,18 @@ const WalkthroughPage: React.FC = () => {
                 <Table>
                 <TableHead>
                     <TableRow>
-                    <TableCell><b>Task</b> (editable)</TableCell>
-                    <TableCell><b>Status</b></TableCell>
-                        {displayColumns.assignee && <TableCell><b>Assignee</b></TableCell>}
-                        {displayColumns.dueDate && <TableCell><b>Due Date</b></TableCell>}
-                        {displayColumns.priority && <TableCell><b>Priority</b></TableCell>}
+                        {selectedBed === "All Beds" && <TableCell><b>Bed</b></TableCell>}
+                        <TableCell><b>Task</b> (editable)</TableCell>
+                        <TableCell><b>Status</b></TableCell>
+                            {displayColumns.assignee && <TableCell><b>Assignee</b></TableCell>}
+                            {displayColumns.dueDate && <TableCell><b>Due Date</b></TableCell>}
+                            {displayColumns.priority && <TableCell><b>Priority</b></TableCell>}
                     </TableRow>
                 </TableHead>
                 <TableBody>
                     {tasks.map((task) => (
                     <TableRow key={task.id}>
+                        {selectedBed === 'All Beds' && <TableCell>{task.bed}</TableCell>}
                         <TableCell onDoubleClick={() => handleEditStart(task.id, 'task_description', task.task_description)}>
                             {editableCell.rowId === task.id && editableCell.column === 'task_description' ? (
                                 <TextField

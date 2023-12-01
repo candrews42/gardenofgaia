@@ -69,21 +69,33 @@ app.get('/api/plant_tracker', async (req, res) => {
 // Route to get plant_snapshot entries for a specific area and bed
 app.get('/api/plant-snapshots', async (req, res) => {
     try {
-        const { area, bed } = req.query;
+        const { area_id, bed } = req.query;
 
-        // Assuming you have a way to map area and bed to location_id
-        const locationIdQuery = 'SELECT id FROM garden_locations WHERE area = $1 AND bed = $2';
-        const locationResult = await pool.query(locationIdQuery, [area, bed]);
+        // Adjust the query to conditionally include the bed in the WHERE clause
+        const locationIdQuery = bed 
+            ? 'SELECT id, bed FROM garden_locations WHERE area_id = $1 AND bed = $2'
+            : 'SELECT id, bed FROM garden_locations WHERE area_id = $1';
+        const queryParams = bed ? [area_id, bed] : [area_id];
+
+        const locationResult = await pool.query(locationIdQuery, queryParams);
 
         if (locationResult.rows.length === 0) {
             return res.status(404).json({ message: 'Location not found' });
         }
 
-        const locationId = locationResult.rows[0].id;
-        const snapshotsQuery = 'SELECT * FROM plant_snapshot WHERE location_id = $1';
-        const snapshotsResult = await pool.query(snapshotsQuery, [locationId]);
-        
-        res.json(snapshotsResult.rows);
+        // If bed is not provided, return all plants in the area
+        const snapshotsQuery = bed 
+            ? 'SELECT * FROM plant_snapshot WHERE location_id = $1'
+            : 'SELECT * FROM plant_snapshot WHERE location_id IN (SELECT id FROM garden_locations WHERE area_id = $1)';
+        const snapshotsResult = await pool.query(snapshotsQuery, bed ? [locationResult.rows[0].id] : [area_id]);
+
+        // Add bed information to each snapshot
+        const snapshotsWithBed = snapshotsResult.rows.map(snapshot => ({
+            ...snapshot,
+            bed: locationResult.rows.find(location => location.id === snapshot.location_id).bed
+        }));
+
+        res.json(snapshotsWithBed);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');
@@ -133,30 +145,44 @@ app.put('/api/tasks/:id', async (req, res) => {
 // Route to get task entries for a specific area and bed
 app.get('/api/tasks', async (req, res) => {
     try {
-        const { area, bed } = req.query;
-        console.log(`Looking for tasks with area: ${area}, bed: ${bed}`); // Debugging log
+        const { area_id, bed } = req.query;
 
-        const locationIdQuery = 'SELECT id FROM garden_locations WHERE area = $1 AND bed = $2';
-        const locationResult = await pool.query(locationIdQuery, [area, bed]);
+        // Adjust the query to conditionally include the bed in the WHERE clause
+        const locationIdQuery = bed 
+            ? 'SELECT id, bed FROM garden_locations WHERE area_id = $1 AND bed = $2'
+            : 'SELECT id, bed FROM garden_locations WHERE area_id = $1';
+        const queryParams = bed ? [area_id, bed] : [area_id];
+
+        const locationResult = await pool.query(locationIdQuery, queryParams);
 
         if (locationResult.rows.length === 0) {
-            console.error('Location not found for area:', area, 'bed:', bed); // Debugging log
             return res.status(404).json({ message: 'Location not found' });
         }
 
-        const locationId = locationResult.rows[0].id;
-        console.log(`Found locationId: ${locationId}`); // Debugging log
-
-        const tasksQuery = 'SELECT * FROM task_manager WHERE location_id = $1';
-        const tasksResult = await pool.query(tasksQuery, [locationId]);
+        // If bed is not provided, return all tasks in the area
+        const tasksQuery = bed 
+            ? 'SELECT * FROM task_manager WHERE location_id = $1'
+            : 'SELECT * FROM task_manager WHERE location_id IN (SELECT id FROM garden_locations WHERE area_id = $1)';
+        console.log("tasks query:", tasksQuery)
+        console.log(locationResult.rows)
+        console.log(locationResult.rows[0])
+        console.log(locationResult.rows[0].id)
+        console.log("area", area_id)
+        const tasksResult = await pool.query(tasksQuery, bed ? [locationResult.rows[0].id] : [area_id]);
+        console.log("tasks result", tasksResult)
+        // Add bed information to each task
         
-        res.json(tasksResult.rows);
+        const tasksWithBed = tasksResult.rows.map(task => ({
+            ...task,
+            bed: locationResult.rows.find(location => location.id === task.location_id)?.bed
+        }));
+
+        res.json(tasksWithBed);
     } catch (err) {
-        console.error('Server Error', err.message); // More informative error log
+        console.error(err.message);
         res.status(500).send('Server Error');
     }
 });
-
 
 
 // POST endpoint to add an entry to the plant_tracker table
