@@ -20,8 +20,11 @@ const WalkthroughPage: React.FC = () => {
     const [username, setUsername] = useState('');
     const [image, setImage] = useState<File | null>(null);
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
+    // selected area and garden bed
     const [selectedArea, setSelectedArea] = useState('');
     const [selectedBed, setSelectedBed] = useState('');
+    const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
+    const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
     // for geolocation
     const autoFilledLocation = useCurrentLocation();
     // plant and task snapshots
@@ -55,14 +58,16 @@ const WalkthroughPage: React.FC = () => {
 
     // fetch plantSnapshot and tasks for selected bed
     useEffect(() => {
-        if (selectedArea) {
-            const bed = selectedBed !== 'All Beds' ? encodeURIComponent(selectedBed) : null;
-            const bedQuery = bed ? `&bed=${bed}` : '';
-            const areaId = gardenLocations.find(location => location.area === selectedArea)?.area_id;
-            fetchData(`http://localhost:3001/api/plant-snapshots?area_id=${areaId}${bedQuery}`, setPlantSnapshots);
-            fetchData(`http://localhost:3001/api/tasks?area_id=${areaId}${bedQuery}`, setTasks);
+        if (selectedArea && selectedBed) {
+            const selectedLocation = gardenLocations.find(location => 
+                location.area === selectedArea && location.bed === selectedBed
+            );
+            if (selectedLocation) {
+                setSelectedAreaId(selectedLocation.area_id);
+                setSelectedLocationId(selectedLocation.id);
+            }
         }
-    }, [selectedArea, selectedBed]);
+    }, [selectedArea, selectedBed, gardenLocations]);
 
     // understand columns to show
     useEffect(() => {
@@ -79,12 +84,10 @@ const WalkthroughPage: React.FC = () => {
 
     // refresh tables
     const handleRefresh = () => {
-        if (selectedArea) {
-            const bed = selectedBed !== 'All Beds' ? encodeURIComponent(selectedBed) : null;
-            const bedQuery = bed ? `&bed=${bed}` : '';
-            const areaId = gardenLocations.find(location => location.area === selectedArea)?.area_id;
-            fetchData(`http://localhost:3001/api/plant-snapshots?area_id=${areaId}${bedQuery}`, setPlantSnapshots);
-            fetchData(`http://localhost:3001/api/tasks?area_id=${areaId}${bedQuery}`, setTasks);
+        if (selectedAreaId) {
+            const bedQuery = selectedBed !== 'All Beds' ? `&bed=${encodeURIComponent(selectedBed)}` : '';
+            fetchData(`http://localhost:3001/api/plant-snapshots?area_id=${selectedAreaId}${bedQuery}`, setPlantSnapshots);
+            fetchData(`http://localhost:3001/api/tasks?area_id=${selectedAreaId}${bedQuery}`, setTasks);
         }
     }
 
@@ -194,14 +197,6 @@ const WalkthroughPage: React.FC = () => {
                     return;
                 }
         
-                const selectedLocation = gardenLocations.find(location => 
-                    location.area === selectedArea && location.bed === selectedBed
-                );
-                if (!selectedLocation) {
-                    console.error('Error: Location not found');
-                    return;
-                }   
-        
                 const response = await fetch('http://localhost:3001/api/update-plant-snapshot-notes', {
                     method: 'POST',
                     headers: {
@@ -222,7 +217,8 @@ const WalkthroughPage: React.FC = () => {
         
                 const plantTrackerData = {
                     date: new Date().toISOString().slice(0, 10),
-                    location_id: selectedLocation,
+                    location_id: selectedLocationId,
+                    area_id: selectedAreaId,
                     plant_id: editedSnapshot.plant_id,
                     action_category: 'manual',
                     notes: editableValue,
@@ -299,20 +295,12 @@ const WalkthroughPage: React.FC = () => {
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        // Find the location_id that matches both the selected area and bed
-        const selectedLocation = gardenLocations.find(location => 
-            location.area === selectedArea && location.bed === selectedBed
-            
-        );
-        if (!selectedLocation) {
-            console.error('Error: Location not found');
-            return;
-        }   
-
+        console.log(selectedLocationId)
         const formData = new FormData();
         formData.append('date', new Date().toISOString().slice(0, 10));
-        formData.append('location_id', selectedLocation.id.toString()); // Updated to use the correct location_id
-        // formData.append('location_id', gardenLocations[currentLocationIndex].id.toString());
+        if (selectedLocationId !== null) {
+            formData.append('location_id', selectedLocationId.toString());
+        }
         formData.append('notes', notes);
         formData.append('username', username);
         formData.append('current_location', autoFilledLocation);
@@ -340,9 +328,12 @@ const WalkthroughPage: React.FC = () => {
             const nextIndex = currentIndex; //+ 1;
 
             if (nextIndex < gardenLocations.length) {
-                setSelectedArea(gardenLocations[nextIndex].area);
-                setSelectedBed(gardenLocations[nextIndex].bed);
-                setCurrentLocationIndex(nextIndex);
+                const nextLocation = gardenLocations[nextIndex];
+                if (nextLocation) {
+                    setSelectedArea(nextLocation.area);
+                    setSelectedBed(nextLocation.bed);
+                    setCurrentLocationIndex(nextIndex);
+                }
             } else {
                 // Handle the end of the list case
             }

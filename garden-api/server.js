@@ -185,13 +185,12 @@ app.get('/api/tasks', async (req, res) => {
 });
 
 
-// POST endpoint to add an entry to the plant_tracker table
 app.post('/api/plant-tracker', async (req, res) => {
     try {
-        const { date, location_id, plant_id, action_category, notes, picture, plant_name } = req.body;
+        const { date, location_id, plant_id, action_category, notes, picture, plant_name, area_id } = req.body;
         const newEntry = await pool.query(
-            'INSERT INTO plant_tracker (date, location_id, plant_id, action_category, notes, picture, plant_name) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
-            [date, location_id, plant_id, action_category, notes, picture, plant_name]
+            'INSERT INTO plant_tracker (date, location_id, plant_id, action_category, notes, picture, plant_name, area_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+            [date, location_id, plant_id, action_category, notes, picture, plant_name, area_id]
         );
         res.json(newEntry.rows[0]);
     } catch (err) {
