@@ -1,4 +1,4 @@
-PPo// File: garden-api/server.js
+// File: garden-api/server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -63,6 +63,18 @@ app.get('/api/plant_tracker', async (req, res) => {
     }
   });
 
+
+// Route to get all areas
+app.get('/api/areas', async (req, res) => {
+    try {
+        const areas = await pool.query('SELECT * FROM areas');
+        res.json(areas.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // get plant snapshot for specific bed
 // ... (existing imports and setup)
 
@@ -70,6 +82,7 @@ app.get('/api/plant_tracker', async (req, res) => {
 app.get('/api/plant-snapshots', async (req, res) => {
     try {
         const { area_id, bed } = req.query;
+        console.log("query here:", req.query)
 
         // If no area_id or bed is provided, return all records from the plant_snapshot table
         if (!area_id && !bed) {

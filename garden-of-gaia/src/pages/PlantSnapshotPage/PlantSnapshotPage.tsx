@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container } from '@mui/material';
-import fetchData from '../../utils/fetchData';
+import fetchSnapshotData from '../../utils/fetchSnapshotData';
 
 const PlantSnapshotPage: React.FC = () => {
     const [plantSnapshots, setPlantSnapshots] = useState<any[]>([]);
 
+
     useEffect(() => {
-        fetchData('http://localhost:3001/api/plant-snapshots', setPlantSnapshots);
+        fetchSnapshotData('http://localhost:3001/api/plant-snapshots', setPlantSnapshots);
     }, []);
 
     return (
