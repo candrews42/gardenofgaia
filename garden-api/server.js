@@ -75,6 +75,17 @@ app.get('/api/areas', async (req, res) => {
     }
 });
 
+// Route to get all observations from area_tracker_raw
+app.get('/api/area-tracker-raw', async (req, res) => {
+    try {
+        const observations = await pool.query('SELECT * FROM area_tracker_raw');
+        res.json(observations.rows);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Server Error');
+    }
+});
+
 // get plant snapshot for specific bed
 // ... (existing imports and setup)
 
