@@ -5,6 +5,7 @@ import MapPage from './pages/MapPage/MapPage';
 import DashboardPage from './pages/DashboardPage/DashboardPage';
 import PlantTrackerPage from './pages/PlantTrackerPage/PlantTrackerPage';
 import WalkthroughPage from './pages/WalkthroughPage/WalkthroughPage';
+import PlantSnapshotPage from './pages/PlantSnapshotPage/PlantSnapshotPage';
 import './App.css';
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/planttracker" element={<PlantTrackerPage />} />
           <Route path="/walkthrough" element={<WalkthroughPage />} />
+          <Route path="/plantsnapshot" element={<PlantSnapshotPage />} />
         </Routes>
       </div>
     </Router>

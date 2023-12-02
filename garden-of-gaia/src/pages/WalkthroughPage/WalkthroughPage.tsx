@@ -11,6 +11,7 @@ import InfoIcon from '@mui/icons-material/Info';
 import { Snackbar, Alert } from '@mui/material'; // Import Snackbar and Alert
 import DeleteIcon from '@mui/icons-material/Delete';
 import useCurrentLocation from '../../utils/useCurrentLocation';
+import fetchData from '../../utils/fetchData';
 
 const WalkthroughPage: React.FC = () => {
     // input fields
@@ -44,17 +45,6 @@ const WalkthroughPage: React.FC = () => {
     const [editableCell, setEditableCell] = useState<EditableCell>({ rowId: null, column: null });
     const [editableValue, setEditableValue] = useState('');
     
-    // fetch data util
-    const fetchData = async (url: string, setData: React.Dispatch<React.SetStateAction<any[]>>) => {
-        try {
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Failed to fetch data');
-            const data = await response.json();
-            setData(data);
-        } catch (error) {
-            console.error(`Error fetching data from ${url}:`, error);
-        }
-    };
 
     // fetch plantSnapshot and tasks for selected bed
     useEffect(() => {
@@ -82,6 +72,9 @@ const WalkthroughPage: React.FC = () => {
         setDisplayColumns(columnsToShow);
     }, [tasks]);
 
+    useEffect(() => {
+        handleRefresh();
+    }, [selectedArea, selectedBed]);
     // refresh tables
     const handleRefresh = () => {
         if (selectedAreaId) {

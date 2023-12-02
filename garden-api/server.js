@@ -1,4 +1,4 @@
-// File: garden-api/server.js
+PPo// File: garden-api/server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -71,6 +71,11 @@ app.get('/api/plant-snapshots', async (req, res) => {
     try {
         const { area_id, bed } = req.query;
 
+        // If no area_id or bed is provided, return all records from the plant_snapshot table
+        if (!area_id && !bed) {
+            const allSnapshotsResult = await pool.query('SELECT * FROM plant_snapshot');
+            return res.json(allSnapshotsResult.rows);
+        }
         // Adjust the query to conditionally include the bed in the WHERE clause
         const locationIdQuery = bed 
             ? 'SELECT id, bed FROM garden_locations WHERE area_id = $1 AND bed = $2'
