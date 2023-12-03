@@ -2,10 +2,11 @@
   "name": "garden-api",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "deploy": "npm --prefix ../garden-of-gaia run build && gcloud run deploy garden-of-gaia --source . --zone asia-south2-b"
+    "deploy": "npm --prefix ../garden-of-gaia run build && npm run deploynobuild",
+    "deploynobuild": "gcloud run deploy garden-of-gaia --source ."
   },
   "keywords": [],
   "author": "",
@@ -17,7 +18,9 @@
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1",
     "openai": "^4.18.0",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "sharp": "^0.33.0"
   }
 }

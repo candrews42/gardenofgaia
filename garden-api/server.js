@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // for serving the frontend's static assets
-app.use(express.static(path.join(__dirname, "../garden-of-gaia/build")))
+app.use(express.static(path.join(__dirname, "./build")))
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
