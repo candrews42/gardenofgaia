@@ -14,11 +14,6 @@ app.use(express.json());
 
 // for serving the frontend's static assets
 app.use(express.static(path.join(__dirname, "../garden-of-gaia/build")))
-// for serving the frontend
-app.get('/', (req, res) => {
-  // res.send('Hello from Garden of Gaia backend!');
-  res.sendFile(path.join(__dirname, "build/index.html"))
-});
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {

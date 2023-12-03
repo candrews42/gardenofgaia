@@ -28,7 +28,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && powershell -Command \"Move-Item -Path .\\build -Destination ..\\garden-api\"",
+    "build": "react-scripts build && powershell -Command \"if (Test-Path ..\\garden-api\\build) { Remove-Item ..\\garden-api\\build -Recurse -Force }; Move-Item -Path .\\build -Destination ..\\garden-api\"",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
