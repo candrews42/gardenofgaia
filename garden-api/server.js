@@ -1,15 +1,23 @@
+
+
+
+
 // File: garden-api/server.js
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-
+const path = require('path')
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// for serving the frontend's static assets
+app.use(express.static(path.join(__dirname, "../garden-of-gaia/build")))
+// for serving the frontend
 app.get('/', (req, res) => {
-  res.send('Hello from Garden of Gaia backend!');
+  // res.send('Hello from Garden of Gaia backend!');
+  res.sendFile(path.join(__dirname, "build/index.html"))
 });
 
 const PORT = process.env.PORT || 3001;
@@ -76,7 +84,7 @@ app.get('/api/areas', async (req, res) => {
 });
 
 // Route to get all observations from area_tracker_raw
-app.get('/api/area-tracker-raw', async (req, res) => {
+app.get('/api/observations', async (req, res) => {
     try {
         const observations = await pool.query('SELECT * FROM area_tracker_raw');
         res.json(observations.rows);
@@ -300,4 +308,7 @@ app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
     }
 });
 
-
+// for serving the frontend
+app.get('/*', (req, res) => {
+    res.sendFile(path.join(__dirname, "build/index.html"))
+  });
