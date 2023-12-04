@@ -79,8 +79,8 @@ const WalkthroughPage: React.FC = () => {
     const handleRefresh = () => {
         if (selectedAreaId) {
             const bedQuery = selectedBed !== 'All Beds' ? `&bed=${encodeURIComponent(selectedBed)}` : '';
-            fetchData(`http://localhost:3001/api/plant-snapshots?area_id=${selectedAreaId}${bedQuery}`, setPlantSnapshots);
-            fetchData(`http://localhost:3001/api/tasks?area_id=${selectedAreaId}${bedQuery}`, setTasks);
+            fetchData(`${process.env.REACT_APP_SERVER_API_URL}/api/plant-snapshots?area_id=${selectedAreaId}${bedQuery}`, setPlantSnapshots);
+            fetchData(`${process.env.REACT_APP_SERVER_API_URL}/api/tasks?area_id=${selectedAreaId}${bedQuery}`, setTasks);
         }
     }
 
@@ -94,7 +94,7 @@ const WalkthroughPage: React.FC = () => {
     useEffect(() => {
         const fetchGardenLocations = async () => {
             try {
-                const response = await fetch('http://localhost:3001/api/garden-locations');
+                const response = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/garden-locations`);
                 const data = await response.json();
                 setGardenLocations(data);
     
@@ -133,7 +133,7 @@ const WalkthroughPage: React.FC = () => {
     // };
 
     const createPlantTrackerEntry = async (data: any) => {
-        const response = await fetch('http://localhost:3001/api/plant-tracker', {
+        const response = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/plant-tracker` , {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -167,7 +167,7 @@ const WalkthroughPage: React.FC = () => {
     
             await createPlantTrackerEntry(plantTrackerData);
     
-            const deleteResponse = await fetch(`http://localhost:3001/api/plant-snapshots/${snapshotId}`, {
+            const deleteResponse = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/plant-snapshots/${snapshotId}`, {
                 method: 'DELETE',
             });
     
@@ -190,7 +190,7 @@ const WalkthroughPage: React.FC = () => {
                     return;
                 }
         
-                const response = await fetch('http://localhost:3001/api/update-plant-snapshot-notes', {
+                const response = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/update-plant-snapshot-notes`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -226,7 +226,7 @@ const WalkthroughPage: React.FC = () => {
             } else if (editableCell.column === 'task_description') {
                 console.log(editableValue)
                 try {
-                    const response = await fetch(`http://localhost:3001/api/tasks/${editableCell.rowId}`, {
+                    const response = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/tasks/${editableCell.rowId}`, {
                         method: 'PUT',
                         headers: {
                             'Content-Type': 'application/json',
@@ -256,7 +256,7 @@ const WalkthroughPage: React.FC = () => {
 
     const handleDeleteTask = async (taskId: number) => {
         try {
-            const deleteResponse = await fetch(`http://localhost:3001/api/tasks/${taskId}`, {
+            const deleteResponse = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/tasks/${taskId}`, {
                 method: 'DELETE',
             });
     
@@ -307,7 +307,7 @@ const WalkthroughPage: React.FC = () => {
         });
 
         try {
-            const response = await fetch('http://localhost:3001/api/area-tracker-raw', {
+            const response = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/area-tracker-raw`, {
                 method: 'POST',
                 body: formData, // FormData is used for file upload
             });

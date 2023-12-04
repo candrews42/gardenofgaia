@@ -5,11 +5,11 @@ const fetchSnapshotData = async (url: string, setData: React.Dispatch<React.SetS
         const data = await response.json();
         console.log('Fetched data:', data);
 
-        const areaResponse = await fetch(`http://localhost:3001/api/areas`);
+        const areaResponse = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/areas`);
         const areas = await areaResponse.json();
         console.log('Fetched areas:', areas);
 
-        const bedResponse = await fetch(`http://localhost:3001/api/garden_locations`);
+        const bedResponse = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/garden_locations`);
         const beds = await bedResponse.json();
         console.log('Fetched beds:', beds);
 
