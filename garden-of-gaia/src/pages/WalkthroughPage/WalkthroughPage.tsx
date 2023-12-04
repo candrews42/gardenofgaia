@@ -12,10 +12,9 @@ import { Snackbar, Alert } from '@mui/material'; // Import Snackbar and Alert
 import DeleteIcon from '@mui/icons-material/Delete';
 import useCurrentLocation from '../../utils/useCurrentLocation';
 import fetchData from '../../utils/fetchData';
+import { useGardenLocations } from '../../utils/useGardenLocations';
 
 const WalkthroughPage: React.FC = () => {
-    // input fields
-    const [gardenLocations, setGardenLocations] = useState<GardenLocation[]>([]);
     const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
     const [notes, setNotes] = useState('');
     const [username, setUsername] = useState('');
@@ -24,8 +23,7 @@ const WalkthroughPage: React.FC = () => {
     // selected area and garden bed
     const [selectedArea, setSelectedArea] = useState('');
     const [selectedBed, setSelectedBed] = useState('');
-    const [selectedAreaId, setSelectedAreaId] = useState<number | null>(null);
-    const [selectedLocationId, setSelectedLocationId] = useState<number | null>(null);
+    const { gardenLocations, selectedAreaId, selectedLocationId } = useGardenLocations(selectedArea, selectedBed);
     // for geolocation
     const autoFilledLocation = useCurrentLocation();
     // plant and task snapshots
@@ -46,19 +44,6 @@ const WalkthroughPage: React.FC = () => {
     const [editableValue, setEditableValue] = useState('');
     
 
-    // fetch plantSnapshot and tasks for selected bed
-    useEffect(() => {
-        if (selectedArea && selectedBed) {
-            const selectedLocation = gardenLocations.find(location => 
-                location.area === selectedArea && location.bed === selectedBed
-            );
-            if (selectedLocation) {
-                setSelectedAreaId(selectedLocation.area_id);
-                setSelectedLocationId(selectedLocation.id);
-            }
-        }
-    }, [selectedArea, selectedBed, gardenLocations]);
-
     // understand columns to show
     useEffect(() => {
         const columnsToShow = tasks.reduce(
@@ -72,6 +57,7 @@ const WalkthroughPage: React.FC = () => {
         setDisplayColumns(columnsToShow);
     }, [tasks]);
 
+
     useEffect(() => {
         handleRefresh();
     }, [selectedArea, selectedBed]);
@@ -84,32 +70,6 @@ const WalkthroughPage: React.FC = () => {
         }
     }
 
-    // get garden locations
-    interface GardenLocation {
-        id: number;
-        area: string;
-        bed: string;
-        area_id: number;
-    }
-    useEffect(() => {
-        const fetchGardenLocations = async () => {
-            try {
-                const response = await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/garden-locations`);
-                const data = await response.json();
-                setGardenLocations(data);
-    
-                // Set initial values for area and bed if data is available
-                if (data.length > 0) {
-                    setSelectedArea(data[0].area);
-                    setSelectedBed('All Beds');
-                }
-            } catch (error) {
-                console.error('Error fetching garden locations:', error);
-            }
-        };
-    
-        fetchGardenLocations();
-    }, []);
 
     const uniqueAreas = useMemo(() => {
         return Array.from(new Set(gardenLocations.map(location => location.area)));
@@ -314,22 +274,7 @@ const WalkthroughPage: React.FC = () => {
 
             setSnackbarOpen(true);
     
-            // Find the next index based on the selected bed
-            const currentIndex = gardenLocations.findIndex(location => 
-                location.area === selectedArea && location.bed === selectedBed
-            );
-            const nextIndex = currentIndex; //+ 1;
-
-            if (nextIndex < gardenLocations.length) {
-                const nextLocation = gardenLocations[nextIndex];
-                if (nextLocation) {
-                    setSelectedArea(nextLocation.area);
-                    setSelectedBed(nextLocation.bed);
-                    setCurrentLocationIndex(nextIndex);
-                }
-            } else {
-                // Handle the end of the list case
-            }
+            
         } catch (error) {
             console.error('Error submitting walkthrough form:', error);
         }
@@ -339,10 +284,6 @@ const WalkthroughPage: React.FC = () => {
         setSnackbarOpen(false); // Close the Snackbar
     };
 
-    
-    if (currentLocationIndex >= gardenLocations.length) {
-        return <div>Walkthrough complete!</div>;
-    }
 
     return (
         <Container maxWidth="md" sx={{ marginTop: 4 }}>
