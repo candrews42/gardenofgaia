@@ -13,6 +13,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import useCurrentLocation from '../../utils/useCurrentLocation';
 import fetchData from '../../utils/fetchData';
 import { useGardenLocations } from '../../utils/useGardenLocations';
+import { useRefreshData } from '../../utils/useRefreshData';
+
 
 const WalkthroughPage: React.FC = () => {
     const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
@@ -27,8 +29,8 @@ const WalkthroughPage: React.FC = () => {
     // for geolocation
     const autoFilledLocation = useCurrentLocation();
     // plant and task snapshots
-    const [plantSnapshots, setPlantSnapshots] = useState<any[]>([]);
-    const [tasks, setTasks] = useState<any[]>([]);
+    const { plantSnapshots, setPlantSnapshots, tasks, setTasks, handleRefresh } = useRefreshData(selectedAreaId || 0, selectedBed);
+    
     // table display columns
     const [displayColumns, setDisplayColumns] = useState({
         assignee: false,
@@ -61,14 +63,6 @@ const WalkthroughPage: React.FC = () => {
     useEffect(() => {
         handleRefresh();
     }, [selectedArea, selectedBed]);
-    // refresh tables
-    const handleRefresh = () => {
-        if (selectedAreaId) {
-            const bedQuery = selectedBed !== 'All Beds' ? `&bed=${encodeURIComponent(selectedBed)}` : '';
-            fetchData(`${process.env.REACT_APP_SERVER_API_URL}/api/plant-snapshots?area_id=${selectedAreaId}${bedQuery}`, setPlantSnapshots);
-            fetchData(`${process.env.REACT_APP_SERVER_API_URL}/api/tasks?area_id=${selectedAreaId}${bedQuery}`, setTasks);
-        }
-    }
 
 
     const uniqueAreas = useMemo(() => {
