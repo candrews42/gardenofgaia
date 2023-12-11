@@ -33,7 +33,8 @@ const FarmMap: React.FC<FarmMapProps> = ({ observations }) => {
         
         const map = new mapboxgl.Map({
             container: mapContainerRef.current,
-            style: 'mapbox://styles/mapbox/streets-v11',
+            // style: 'mapbox://styles/mapbox/streets-v11',
+            style: 'mapbox://styles/mapbox/satellite-v9',
             center: [50.45865730317095, 26.202712001219915],
             zoom: 15
         });
