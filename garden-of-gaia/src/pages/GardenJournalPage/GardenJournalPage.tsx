@@ -2,9 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, Container } from '@mui/material';
 import fetchGardenJournalData from '../../utils/fetchGardenJournalData';
 
+// Define a type for the entries
+type EntryType = {
+    id: number;
+    date: string;
+    location: string;
+    datetime: string;
+    location_id: number;
+    plant_name?: string;
+    action_category?: string;
+    username?: string;
+    current_location?: string;
+    notes: string;
+};
+
 const GardenJournalPage: React.FC = () => {
-    const [gardenJournal, setGardenJournal] = useState<any[]>([]);
-    const [plantTracker, setPlantTracker] = useState<any[]>([]);
+    const [gardenJournal, setGardenJournal] = useState<EntryType[]>([]);
+    const [plantTracker, setPlantTracker] = useState<EntryType[]>([]);
 
     useEffect(() => {
         fetchGardenJournalData(`${process.env.REACT_APP_SERVER_API_URL}/api/observations`, setGardenJournal);
@@ -22,6 +36,9 @@ const GardenJournalPage: React.FC = () => {
     const combinedData = [...new_gardenJournal, ...plantTracker].sort((a, b) => {
         return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
+
+    // Check if an entry is from plantTracker
+    const isPlantTrackerEntry = (entry: EntryType) => entry.plant_name || entry.action_category;
 
     return (
         <Container maxWidth="md" sx={{ marginTop: 4 }}>
@@ -41,7 +58,7 @@ const GardenJournalPage: React.FC = () => {
                     </TableHead>
                     <TableBody>
                         {combinedData.map((entry) => (
-                            <TableRow key={entry.id}>
+                            <TableRow key={entry.id} style={isPlantTrackerEntry(entry) ? { fontStyle: 'italic', backgroundColor: '#e8f5e9' } : {}}>
                                 <TableCell>{entry.datetime}</TableCell>
                                 <TableCell>{entry.location_id}</TableCell>
                                 <TableCell>{entry.plant_name || entry.username || ''}</TableCell>
