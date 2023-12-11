@@ -11,7 +11,8 @@ const HomePage: React.FC = () => {
         <Link to="/walkthrough">Walkthrough</Link><br />
         <Link to="/map">View Map</Link><br />
         {/* <Link to="/planttracker">Plant Tracker</Link><br />   */}
-        <Link to="/plantsnapshot">Plant Snapshot</Link><br />
+        <Link to="/gardenjournal">Garden Journal</Link><br />
+        <Link to="/taskmanager">Task Manager</Link><br />
         {/* <Link to="/dashboard">Dashboard</Link><br /> */}
       </nav>
     </div>
