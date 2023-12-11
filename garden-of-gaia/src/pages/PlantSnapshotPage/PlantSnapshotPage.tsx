@@ -7,7 +7,7 @@ const PlantSnapshotPage: React.FC = () => {
 
 
     useEffect(() => {
-        fetchSnapshotData('http://localhost:3001/api/plant-snapshots', setPlantSnapshots);
+        fetchSnapshotData(`${process.env.REACT_APP_SERVER_API_URL}/api/plant-snapshots`, setPlantSnapshots);
     }, []);
 
     return (

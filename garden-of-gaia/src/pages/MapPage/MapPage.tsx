@@ -7,8 +7,13 @@ const MapPage: React.FC = () => {
     const [observations, setObservations] = useState([]);
 
     useEffect(() => {
-        fetch('http://localhost:3001/api/area-tracker-raw')
-            .then(response => response.json())
+        fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/observations`)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
             .then(data => setObservations(data))
             .catch(error => console.error('Error:', error));
     }, []);

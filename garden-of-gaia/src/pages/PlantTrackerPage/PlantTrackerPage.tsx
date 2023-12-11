@@ -51,7 +51,7 @@ const PlantTrackerPage: React.FC = () => {
    
     
     useEffect(() => {
-    fetch('http://localhost:3001/api/garden-locations')
+    fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/garden-locations`)
         .then(response => response.json())
         .then((data: GardenLocation[]) => setGardenLocations(data))
         .catch(error => console.error('Error fetching garden locations:', error));
@@ -94,7 +94,7 @@ const PlantTrackerPage: React.FC = () => {
                 picture: '', // TODO Handle picture logic as required
             };
 
-            await fetch('http://localhost:3001/api/plant-tracker', {
+            await fetch(`${process.env.REACT_APP_SERVER_API_URL}/api/plant-tracker`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

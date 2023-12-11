@@ -22,8 +22,8 @@ const fetchSnapshotData = async (url: string, setData: React.Dispatch<React.SetS
 
             return {
                 ...snapshot,
-                area: area ? area.area_name : 'N/A',
-                bed: bed ? bed.bed : 'N/A',
+                area: area ? area.area_name : '',
+                bed: bed ? bed.bed : '',
             };
         });
         setData(enhancedData);
