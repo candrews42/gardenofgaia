@@ -244,7 +244,7 @@ const WalkthroughPage: React.FC = () => {
 
         console.log(selectedLocationId)
         const formData = new FormData();
-        formData.append('date', new Date().toISOString().slice(0, 10));
+        formData.append('date', new Date().toISOString());
         if (selectedLocationId !== null) {
             formData.append('location_id', selectedLocationId.toString());
         }
