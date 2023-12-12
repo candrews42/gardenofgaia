@@ -111,7 +111,7 @@ const WalkthroughPage: React.FC = () => {
             }
     
             const plantTrackerData = {
-                date: new Date().toISOString().slice(0, 10),
+                date: new Date().toISOString(),
                 location_id: snapshotToDelete.location_id,
                 plant_id: snapshotToDelete.plant_id,
                 action_category: 'removal',
@@ -163,7 +163,7 @@ const WalkthroughPage: React.FC = () => {
                 setPlantSnapshots(updatedSnapshots);
         
                 const plantTrackerData = {
-                    date: new Date().toISOString().slice(0, 10),
+                    date: new Date().toISOString(),
                     location_id: selectedLocationId,
                     area_id: selectedAreaId,
                     plant_id: editedSnapshot.plant_id,

@@ -60,7 +60,7 @@ const GardenJournalPage: React.FC = () => {
                         {combinedData.map((entry) => (
                             <TableRow key={entry.id} style={isPlantTrackerEntry(entry) ? { fontStyle: 'italic', backgroundColor: '#e8f5e9' } : {}}>
                                 <TableCell>{entry.datetime}</TableCell>
-                                <TableCell>{entry.location_id}</TableCell>
+                                <TableCell>{entry.location}</TableCell>
                                 <TableCell>{entry.plant_name || entry.username || ''}</TableCell>
                                 <TableCell>{entry.action_category || entry.current_location || ''}</TableCell>
                                 <TableCell>{entry.notes}</TableCell>
