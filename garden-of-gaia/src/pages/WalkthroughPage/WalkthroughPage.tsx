@@ -30,7 +30,8 @@ const WalkthroughPage: React.FC = () => {
     const autoFilledLocation = useCurrentLocation();
     // plant and task snapshots
     const { plantSnapshots, setPlantSnapshots, tasks, setTasks, handleRefresh } = useRefreshData(selectedAreaId || 0, selectedBed);
-    
+    const [isLoading, setIsLoading] = useState(false);
+
     // table display columns
     const [displayColumns, setDisplayColumns] = useState({
         assignee: false,
@@ -45,6 +46,10 @@ const WalkthroughPage: React.FC = () => {
     const [editableCell, setEditableCell] = useState<EditableCell>({ rowId: null, column: null });
     const [editableValue, setEditableValue] = useState('');
     
+
+    const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        setSelectedDate(new Date(event.target.value));
+    };
 
     // understand columns to show
     useEffect(() => {
@@ -111,7 +116,7 @@ const WalkthroughPage: React.FC = () => {
             }
     
             const plantTrackerData = {
-                date: new Date().toISOString(),
+                date: selectedDate,
                 location_id: snapshotToDelete.location_id,
                 plant_id: snapshotToDelete.plant_id,
                 action_category: 'removal',
@@ -163,7 +168,7 @@ const WalkthroughPage: React.FC = () => {
                 setPlantSnapshots(updatedSnapshots);
         
                 const plantTrackerData = {
-                    date: new Date().toISOString(),
+                    date: selectedDate,
                     location_id: selectedLocationId,
                     area_id: selectedAreaId,
                     plant_id: editedSnapshot.plant_id,
@@ -242,9 +247,16 @@ const WalkthroughPage: React.FC = () => {
     const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
+        setIsLoading(true); // Start loading
+
         console.log(selectedLocationId)
         const formData = new FormData();
-        formData.append('date', new Date().toISOString());
+        if (selectedDate) {
+            formData.append('date', selectedDate.toISOString());
+        } else {
+            // Handle the case where selectedDate is null
+            console.error('Date is not selected');
+        }
         if (selectedLocationId !== null) {
             formData.append('location_id', selectedLocationId.toString());
         }
@@ -265,7 +277,7 @@ const WalkthroughPage: React.FC = () => {
                 method: 'POST',
                 body: formData, // FormData is used for file upload
             });
-
+            setIsLoading(false); // End loading
             setSnackbarOpen(true);
     
             
@@ -287,7 +299,8 @@ const WalkthroughPage: React.FC = () => {
             <Typography variant="subtitle1" gutterBottom component="div">
                 Follow the steps to record your observations for each area and bed in the garden.
             </Typography>
-            
+            <input type="date" value={selectedDate?.toISOString().substr(0, 10)} onChange={handleDateChange} />
+    
             <form onSubmit={handleSubmit}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
