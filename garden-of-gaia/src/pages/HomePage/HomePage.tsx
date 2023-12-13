@@ -8,6 +8,7 @@ const HomePage: React.FC = () => {
     <div>
       <h1>Welcome to the Garden of Gaia</h1>
       <nav>
+      <Link to="/gardendetective">Garden Detective</Link><br />
         <Link to="/walkthrough">Walkthrough</Link><br />
         <Link to="/map">View Map</Link><br />
         {/* <Link to="/planttracker">Plant Tracker</Link><br />   */}
