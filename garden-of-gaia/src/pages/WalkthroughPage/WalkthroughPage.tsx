@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, ChangeEvent } from 'react';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import PhotoCamera from '@mui/icons-material/PhotoCamera';
@@ -14,6 +14,7 @@ import useCurrentLocation from '../../utils/useCurrentLocation';
 import fetchData from '../../utils/fetchData';
 import { useGardenLocations } from '../../utils/useGardenLocations';
 import { useRefreshData } from '../../utils/useRefreshData';
+import CircularProgress from '@mui/material/CircularProgress';
 
 
 const WalkthroughPage: React.FC = () => {
@@ -46,9 +47,26 @@ const WalkthroughPage: React.FC = () => {
     const [editableCell, setEditableCell] = useState<EditableCell>({ rowId: null, column: null });
     const [editableValue, setEditableValue] = useState('');
     
+    // handle date change
+    const handleDateChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const newDate = new Date(event.target.value);
 
-    const handleDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setSelectedDate(new Date(event.target.value));
+        if (!isNaN(newDate.getTime())) {
+            // Get the current time
+            const currentTime = new Date();
+
+            // Create a new Date object with the selected date and current time
+            const dateTime = new Date(
+                newDate.getFullYear(),
+                newDate.getMonth(),
+                newDate.getDate(),
+                currentTime.getHours(),
+                currentTime.getMinutes(),
+                currentTime.getSeconds()
+            );
+
+            setSelectedDate(dateTime);
+        }
     };
 
     // understand columns to show
@@ -376,9 +394,16 @@ const WalkthroughPage: React.FC = () => {
               {image && <Typography variant="caption">Image selected: {image.name}</Typography>}
             </Box>
     
-            <Button type="submit" variant="contained" color="primary" sx={{ marginTop: 0 }}>
-              {currentLocationIndex < gardenLocations.length - 1 ? 'Submit' : 'Submit'}
-            </Button>
+            
+            <div>
+                {isLoading ? (
+                <CircularProgress />
+                ) : (
+                    <Button type="submit" variant="contained" color="primary" sx={{ marginTop: 0 }}>
+                        {currentLocationIndex < gardenLocations.length - 1 ? 'Submit' : 'Submit'}
+                    </Button>
+                )}
+            </div>
           </form>
 
           <Box sx={{ marginTop: 2 }}>
