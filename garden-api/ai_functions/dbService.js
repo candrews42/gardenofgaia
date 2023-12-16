@@ -114,7 +114,6 @@ async function getExistingPlantSnapshots(plantInfos) {
 
 async function updatePlantSnapshot(record, existingSnapshots, updatedSnapshots) {    
     console.log("updated snapshots:", updatedSnapshots)
-    console.log("existing snapshots:", existingSnapshots)
     // STEP 2. Parse plant_tracker and add to plant_snapshot
     console.log("Next, update plant snapshot...")
 

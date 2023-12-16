@@ -528,6 +528,43 @@ const WalkthroughPage: React.FC = () => {
                 </Table>
             </TableContainer>
           </Box>
+          {/* Chatbox container */}
+          <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', boxShadow: 3, padding: 2, zIndex: 1000 }}>
+                <form onSubmit={handleSubmit}>
+                    <TextField
+                        label="Observations"
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        fullWidth
+                        multiline
+                        rows={2}
+                        margin="normal"
+                    />
+                    
+                    {/* Image upload button */}
+                    <input
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        id="icon-button-file"
+                        type="file"
+                        onChange={handleImageChange}
+                    />
+                    <label htmlFor="icon-button-file">
+                        <IconButton color="primary" aria-label="upload picture" component="span">
+                            <PhotoCamera />
+                        </IconButton>
+                    </label>
+
+                    {/* Submit button */}
+                    {isLoading ? (
+                        <CircularProgress />
+                    ) : (
+                        <Button type="submit" variant="contained" color="primary">
+                            Submit
+                        </Button>
+                    )}
+                </form>
+            </Box>
           <Snackbar
                 open={snackbarOpen}
                 autoHideDuration={6000}

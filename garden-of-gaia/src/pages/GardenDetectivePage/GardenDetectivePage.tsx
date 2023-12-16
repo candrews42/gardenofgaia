@@ -17,7 +17,7 @@ import { useRefreshData } from '../../utils/useRefreshData';
 import CircularProgress from '@mui/material/CircularProgress';
 
 
-const WalkthroughPage: React.FC = () => {
+const GardenDetectivePage: React.FC = () => {
     const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
     const [notes, setNotes] = useState('');
     const [username, setUsername] = useState('');
@@ -380,8 +380,9 @@ const WalkthroughPage: React.FC = () => {
                     Submission successful!
                 </Alert>
             </Snackbar>
+            
         </Container>
       );
     };
     
-    export default WalkthroughPage;
+    export default GardenDetectivePage;
