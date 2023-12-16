@@ -15,6 +15,7 @@ import fetchData from '../../utils/fetchData';
 import { useGardenLocations } from '../../utils/useGardenLocations';
 import { useRefreshData } from '../../utils/useRefreshData';
 import CircularProgress from '@mui/material/CircularProgress';
+import Chatbox from '../../components/Chatbox';
 
 
 const WalkthroughPage: React.FC = () => {
@@ -267,10 +268,13 @@ const WalkthroughPage: React.FC = () => {
 
         setIsLoading(true); // Start loading
 
+        // Get the current time
+        const submissionDate = new Date();        
+
         console.log(selectedLocationId)
         const formData = new FormData();
         if (selectedDate) {
-            formData.append('date', selectedDate.toISOString());
+            formData.append('date', submissionDate.toISOString());
         } else {
             // Handle the case where selectedDate is null
             console.error('Date is not selected');
@@ -314,11 +318,7 @@ const WalkthroughPage: React.FC = () => {
             <Typography variant="h3" gutterBottom component="div">
                 Garden Walkthrough
             </Typography>
-            <Typography variant="subtitle1" gutterBottom component="div">
-                Follow the steps to record your observations for each area and bed in the garden.
-            </Typography>
-            <input type="date" value={selectedDate?.toISOString().substr(0, 10)} onChange={handleDateChange} />
-    
+            
             <form onSubmit={handleSubmit}>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 2 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -358,52 +358,6 @@ const WalkthroughPage: React.FC = () => {
                     </Select>
                 </Box>
             </Box>
-            
-            <Box sx={{ marginBottom: 2 }}>
-                <TextField
-                    label="Your Name"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    margin="normal"
-                    fullWidth
-                />
-                <TextField
-                    label="Notes"
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    margin="normal"
-                    fullWidth
-                    multiline
-                    rows={4}
-                />
-                </Box>
-    
-            <Box sx={{ marginBottom: 0 }}>
-              <input
-                accept="image/*"
-                style={{ display: 'none' }}
-                id="icon-button-file"
-                type="file"
-                onChange={handleImageChange}
-              />
-              <label htmlFor="icon-button-file">
-                <IconButton color="primary" aria-label="upload picture" component="span">
-                  <PhotoCamera />
-                </IconButton>
-              </label>
-              {image && <Typography variant="caption">Image selected: {image.name}</Typography>}
-            </Box>
-    
-            
-            <div>
-                {isLoading ? (
-                <CircularProgress />
-                ) : (
-                    <Button type="submit" variant="contained" color="primary" sx={{ marginTop: 0 }}>
-                        {currentLocationIndex < gardenLocations.length - 1 ? 'Submit' : 'Submit'}
-                    </Button>
-                )}
-            </div>
           </form>
 
           <Box sx={{ marginTop: 2 }}>
@@ -529,42 +483,13 @@ const WalkthroughPage: React.FC = () => {
             </TableContainer>
           </Box>
           {/* Chatbox container */}
-          <Box sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff', boxShadow: 3, padding: 2, zIndex: 1000 }}>
-                <form onSubmit={handleSubmit}>
-                    <TextField
-                        label="Observations"
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        fullWidth
-                        multiline
-                        rows={2}
-                        margin="normal"
-                    />
-                    
-                    {/* Image upload button */}
-                    <input
-                        accept="image/*"
-                        style={{ display: 'none' }}
-                        id="icon-button-file"
-                        type="file"
-                        onChange={handleImageChange}
-                    />
-                    <label htmlFor="icon-button-file">
-                        <IconButton color="primary" aria-label="upload picture" component="span">
-                            <PhotoCamera />
-                        </IconButton>
-                    </label>
-
-                    {/* Submit button */}
-                    {isLoading ? (
-                        <CircularProgress />
-                    ) : (
-                        <Button type="submit" variant="contained" color="primary">
-                            Submit
-                        </Button>
-                    )}
-                </form>
-            </Box>
+          <Chatbox
+                notes={notes}
+                setNotes={setNotes}
+                handleImageChange={handleImageChange} // Define this function in your component
+                handleSubmit={handleSubmit} // Define this function in your component
+                isLoading={isLoading}
+            />
           <Snackbar
                 open={snackbarOpen}
                 autoHideDuration={6000}

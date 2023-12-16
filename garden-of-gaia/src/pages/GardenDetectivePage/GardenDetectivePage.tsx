@@ -17,6 +17,7 @@ import { useRefreshData } from '../../utils/useRefreshData';
 import CircularProgress from '@mui/material/CircularProgress';
 
 
+
 const GardenDetectivePage: React.FC = () => {
     const [currentLocationIndex, setCurrentLocationIndex] = useState(0);
     const [notes, setNotes] = useState('');
@@ -380,6 +381,7 @@ const GardenDetectivePage: React.FC = () => {
                     Submission successful!
                 </Alert>
             </Snackbar>
+            {/* Chatbox container */}
             
         </Container>
       );

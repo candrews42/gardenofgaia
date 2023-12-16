@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Typography, TextField, Container } from '@mui/material';
 import fetchGardenJournalData from '../../utils/fetchGardenJournalData';
+import Chatbox from '../../components/Chatbox';
 
 // Define a type for the entries
 type EntryType = {
@@ -85,6 +86,7 @@ const GardenJournalPage: React.FC = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            
         </Container>
     );
 };
