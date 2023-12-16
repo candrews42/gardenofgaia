@@ -32,6 +32,7 @@ async function processGardenNotes(record) {
         console.log(`Processing record: ${record.notes}`);
         // Call the new function to process garden notes
         const plantInfos = await processGardenNotesWithAI(record);
+        console.log("plant infos:", plantInfos)
         
         await insertPlantTracker(plantInfos);
         // data added to plant_tracker            
@@ -48,10 +49,12 @@ async function processPlantTrackerForSnapshot(record, plantInfos) {
 
         // get any existing snapshots: 
         const existingSnapshots = await getExistingPlantSnapshots(plantInfos);
+        console.log("--------------------")
+        console.log("plant Infos", plantInfos)
         console.log("existing snapshots: ", existingSnapshots)
 
         // Call the new function to process garden notes
-        const updatedSnapshots = await processPlantTrackerToPlantSnapshotAI(plantInfos, existingSnapshots);
+        const updatedSnapshots = await processPlantTrackerToPlantSnapshotAI(existingSnapshots);
         
         await updatePlantSnapshot(record, existingSnapshots, updatedSnapshots);
         // data added to plant_tracker            

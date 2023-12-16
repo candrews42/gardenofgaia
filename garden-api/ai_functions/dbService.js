@@ -1,6 +1,13 @@
 const db = require('../db');
 require('dotenv').config({ path: '../.env' });
 
+async function getGardenLocations() {
+    const gardenLocationsQuery = `SELECT id, area, bed FROM garden_locations`;
+    const gardenLocationsResult = await db.query(gardenLocationsQuery);
+    const garden_locations = gardenLocationsResult.rowCount > 0 ? gardenLocationsResult.rows : null;
+    return garden_locations;
+}
+
 async function getExistingTaskList(record, filter_by="location_id") {
     // Validate filter_by to ensure it's a valid column name
     const validFilters = ["location_id", "assignee", "status", "id", "task_description", "due_date", "priority", "added_date"];
@@ -82,7 +89,7 @@ async function insertPlantTracker(plantInfos) {
         // Database operations for each plant
         await db.query(
             'INSERT INTO plant_tracker (date, location_id, plant_name, action_category, notes, picture) VALUES ($1, $2, $3, $4, $5, $6)', 
-            [record.date, record.location_id, plantInfo.plant_name, plantInfo.action_category, plantInfo.notes, record.id]
+            [record.date, plantInfo.location_id, plantInfo.plant_name, plantInfo.action_category, plantInfo.notes, record.id]
         );
         console.log(`Record for ${plantInfo.plant_name} processed and inserted into plant_tracker`);
         }
@@ -96,7 +103,7 @@ async function getExistingPlantSnapshots(plantInfos) {
         for (const plantInfo of plantInfos) {
             console.log("Checking for existing plant snapshot for", plantInfo.plant_name);
             const snapshotQuery = 'SELECT * FROM plant_snapshot WHERE plant_name = $1 AND location_id = $2';
-            const snapshotResult = await db.query(snapshotQuery, [plantInfo.plant_name, record.location_id]);
+            const snapshotResult = await db.query(snapshotQuery, [plantInfo.plant_name, plantInfo.location_id]);
             const existingSnapshot = snapshotResult.rowCount > 0 ? snapshotResult.rows[0] : null;
             console.log("existing snap:", existingSnapshot)
 
@@ -122,7 +129,7 @@ async function updatePlantSnapshot(record, existingSnapshots, updatedSnapshots) 
         } else {
             // Insert new snapshot
             const insertQuery = 'INSERT INTO plant_snapshot (updated_date, location_id, plant_name, plant_status, notes) VALUES ($1, $2, $3, $4, $5) RETURNING id';
-            await db.query(insertQuery, [record.date, record.location_id, updatedSnapshot.plant_name, updatedSnapshot.plant_status, updatedSnapshot.notes]);
+            await db.query(insertQuery, [record.date, updatedSnapshot.location_id, updatedSnapshot.plant_name, updatedSnapshot.plant_status, updatedSnapshot.notes]);
         }
     }
     
@@ -130,4 +137,4 @@ async function updatePlantSnapshot(record, existingSnapshots, updatedSnapshots) 
     return null
 }
 
-module.exports = { getExistingTaskList, updateTaskManager, insertPlantTracker, updatePlantSnapshot, getExistingPlantSnapshots };
+module.exports = { getGardenLocations, getExistingTaskList, updateTaskManager, insertPlantTracker, updatePlantSnapshot, getExistingPlantSnapshots };

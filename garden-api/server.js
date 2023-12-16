@@ -96,7 +96,6 @@ app.get('/api/observations', async (req, res) => {
 app.get('/api/plant-snapshots', async (req, res) => {
     try {
         const { area_id, bed } = req.query;
-        console.log("query here:", req.query)
 
         // If no area_id or bed is provided, return all records from the plant_snapshot table
         if (!area_id && !bed) {
@@ -195,13 +194,7 @@ app.get('/api/tasks', async (req, res) => {
         const tasksQuery = bed 
             ? 'SELECT * FROM task_manager WHERE location_id = $1'
             : 'SELECT * FROM task_manager WHERE location_id IN (SELECT id FROM garden_locations WHERE area_id = $1)';
-        console.log("tasks query:", tasksQuery)
-        console.log(locationResult.rows)
-        console.log(locationResult.rows[0])
-        console.log(locationResult.rows[0].id)
-        console.log("area", area_id)
         const tasksResult = await pool.query(tasksQuery, bed ? [locationResult.rows[0].id] : [area_id]);
-        console.log("tasks result", tasksResult)
         // Add bed information to each task
         
         const tasksWithBed = tasksResult.rows.map(task => ({
@@ -283,7 +276,7 @@ app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
             [date, location_id, notes, username, current_location, resizedImage]
         );
         // After successful insertion, process the garden notes
-        record = newEntry.rows[0]
+        record = newEntry.rows[0];
 
         // first, extract and update any tasks
         const taskList = await processTaskList(record);
