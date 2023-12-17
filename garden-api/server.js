@@ -92,21 +92,21 @@ app.get('/api/observations', async (req, res) => {
 // get plant snapshot for specific bed
 // ... (existing imports and setup)
 
-// Route to get plant_snapshot entries for a specific area and bed
+// Route to get plant_snapshot entries for a specific area_id and bed_id
 app.get('/api/plant-snapshots', async (req, res) => {
     try {
-        const { area_id, bed } = req.query;
+        const { area_id, location_id } = req.query;
 
         // If no area_id or bed is provided, return all records from the plant_snapshot table
-        if (!area_id && !bed) {
+        if (!area_id && !location_id) {
             const allSnapshotsResult = await pool.query('SELECT * FROM plant_snapshot');
             return res.json(allSnapshotsResult.rows);
         }
         // Adjust the query to conditionally include the bed in the WHERE clause
-        const locationIdQuery = bed 
-            ? 'SELECT id, bed FROM garden_locations WHERE area_id = $1 AND bed = $2'
-            : 'SELECT id, bed FROM garden_locations WHERE area_id = $1';
-        const queryParams = bed ? [area_id, bed] : [area_id];
+        const locationIdQuery = location_id 
+            ? 'SELECT location_id, location_name FROM garden_locations WHERE area_id = $1 AND location_id = $2'
+            : 'SELECT location_id, location_name FROM garden_locations WHERE area_id = $1';
+        const queryParams = location_id ? [area_id, location_id] : [area_id];
 
         const locationResult = await pool.query(locationIdQuery, queryParams);
 
@@ -115,18 +115,18 @@ app.get('/api/plant-snapshots', async (req, res) => {
         }
 
         // If bed is not provided, return all plants in the area
-        const snapshotsQuery = bed 
+        const snapshotsQuery = location_id
             ? 'SELECT * FROM plant_snapshot WHERE location_id = $1'
             : 'SELECT * FROM plant_snapshot WHERE location_id IN (SELECT id FROM garden_locations WHERE area_id = $1)';
-        const snapshotsResult = await pool.query(snapshotsQuery, bed ? [locationResult.rows[0].id] : [area_id]);
+        const snapshotsResult = await pool.query(snapshotsQuery, location_id ? [locationResult.rows[0].id] : [area_id]);
 
         // Add bed information to each snapshot
-        const snapshotsWithBed = snapshotsResult.rows.map(snapshot => ({
+        const snapshotsWithLocation = snapshotsResult.rows.map(snapshot => ({
             ...snapshot,
-            bed: locationResult.rows.find(location => location.id === snapshot.location_id).bed
+            location_id: locationResult.rows.find(location => location.location_id === snapshot.location_id).location_id
         }));
 
-        res.json(snapshotsWithBed);
+        res.json(snapshotsWithLocation);
     } catch (err) {
         console.error(err.message);
         res.status(500).send('Server Error');

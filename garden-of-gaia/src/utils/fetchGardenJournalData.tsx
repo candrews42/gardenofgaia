@@ -14,16 +14,16 @@ const fetchSnapshotData = async (url: string, setData: React.Dispatch<React.SetS
         console.log('Fetched beds:', beds);
 
         const enhancedData = data.map((snapshot: any) => {
-            const area = areas.find((area: any) => area.area_id === snapshot.area_id);
-            const bed = beds.find((bed: any) => bed.id === snapshot.location_id);
+            const area_name = areas.find((area_name: any) => area_name.area_id === snapshot.area_id);
+            const location_name = beds.find((location_name: any) => location_name.id === snapshot.location_id);
 
             //console.log("area: ", area)
             //console.log("bed: ", bed)
 
             return {
                 ...snapshot,
-                area: area ? area.area_name : '',
-                bed: bed ? bed.bed : '',
+                area_name: area_name ? area_name.area_name : '',
+                location_name: location_name ? location_name.location_name : '',
             };
         });
         setData(enhancedData);

@@ -2,12 +2,12 @@
 import { useState, useEffect } from 'react';
 import fetchData from './fetchData';
 
-export const useGardenLocations = (selectedArea: string, selectedBed: string) => {
+export const useGardenLocations = (selectedArea: string, selectedLocation: string) => {
     // get garden locations
     interface GardenLocation {
-        id: number;
-        area: string;
-        bed: string;
+        location_id: number;
+        area_name: string;
+        location_name: string;
         area_id: number;
     }
     const [gardenLocations, setGardenLocations] = useState<GardenLocation[]>([]);
@@ -19,16 +19,16 @@ export const useGardenLocations = (selectedArea: string, selectedBed: string) =>
     }, []);
 
     useEffect(() => {
-        if (selectedArea && selectedBed) {
-            const selectedLocation = gardenLocations.find(location => 
-                location.area === selectedArea && location.bed === selectedBed
+        if (selectedArea && selectedLocation) {
+            const parsedLocation = gardenLocations.find(location => 
+                location.area_name === selectedArea && location.location_name === selectedLocation
             );
-        if (selectedLocation) {
-            setSelectedAreaId(selectedLocation.area_id);
-            setSelectedLocationId(selectedLocation.id);
+        if (parsedLocation) {
+            setSelectedAreaId(parsedLocation.area_id);
+            setSelectedLocationId(parsedLocation.location_id);
         }
         }
-    }, [selectedArea, selectedBed, gardenLocations]);
+    }, [selectedArea, selectedLocation, gardenLocations]);
 
     return { gardenLocations, selectedAreaId, selectedLocationId };
 };

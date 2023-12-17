@@ -26,12 +26,12 @@ const WalkthroughPage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState<Date | null>(new Date());
     // selected area and garden bed
     const [selectedArea, setSelectedArea] = useState('');
-    const [selectedBed, setSelectedBed] = useState('');
-    const { gardenLocations, selectedAreaId, selectedLocationId } = useGardenLocations(selectedArea, selectedBed);
+    const [selectedLocation, setSelectedLocation] = useState('');
+    const { gardenLocations, selectedAreaId, selectedLocationId } = useGardenLocations(selectedArea, selectedLocation);
     // for geolocation
     const autoFilledLocation = useCurrentLocation();
     // plant and task snapshots
-    const { plantSnapshots, setPlantSnapshots, tasks, setTasks, handleRefresh } = useRefreshData(selectedAreaId || 0, selectedBed);
+    const { plantSnapshots, setPlantSnapshots, tasks, setTasks, handleRefresh } = useRefreshData(selectedAreaId || 0, selectedLocation);
     const [isLoading, setIsLoading] = useState(false);
 
     // table display columns
@@ -86,15 +86,15 @@ const WalkthroughPage: React.FC = () => {
 
     useEffect(() => {
         handleRefresh();
-    }, [selectedArea, selectedBed]);
+    }, [selectedArea, selectedLocation]);
 
 
     const uniqueAreas = useMemo(() => {
-        return Array.from(new Set(gardenLocations.map(location => location.area)));
+        return Array.from(new Set(gardenLocations.map(location => location.area_name)));
     }, [gardenLocations]);
 
-    const bedsForSelectedArea = useMemo(() => {
-        return Array.from(new Set(gardenLocations.filter(location => location.area === selectedArea).map(location => location.bed)));
+    const LocationsForSelectedArea = useMemo(() => {
+        return Array.from(new Set(gardenLocations.filter(location => location.area_name === selectedArea).map(location => location.location_name)));
     }, [gardenLocations, selectedArea]);
 
     // handle image change
@@ -139,7 +139,7 @@ const WalkthroughPage: React.FC = () => {
                 location_id: snapshotToDelete.location_id,
                 plant_id: snapshotToDelete.plant_id,
                 action_category: 'removal',
-                notes: 'removed from garden bed',
+                notes: 'removed from garden location',
                 plant_name: snapshotToDelete.plant_name
             };
     
@@ -344,16 +344,16 @@ const WalkthroughPage: React.FC = () => {
                     Bed:
                     </Typography>
                     <Select
-                        value={selectedBed}
-                        onChange={(e) => setSelectedBed(e.target.value)}
+                        value={selectedLocation}
+                        onChange={(e) => setSelectedLocation(e.target.value)}
                         displayEmpty
                         fullWidth
                         disabled={!selectedArea}
-                        renderValue={selectedBed !== '' ? undefined : () => <em>Bed</em>}
+                        renderValue={selectedLocation !== '' ? undefined : () => <em>Bed</em>}
                     >
                         <MenuItem value="All Beds">All Beds</MenuItem>
-                        {bedsForSelectedArea.map(bed => (
-                            <MenuItem key={bed} value={bed}>{bed}</MenuItem>
+                        {LocationsForSelectedArea.map(location_name => (
+                            <MenuItem key={location_name} value={location_name}>{location_name}</MenuItem>
                         ))}
                     </Select>
                 </Box>
@@ -374,7 +374,7 @@ const WalkthroughPage: React.FC = () => {
               <Table>
                 <TableHead>
                   <TableRow>
-                    {selectedBed === "All Beds" && <TableCell><b>Bed</b></TableCell>}
+                    {selectedLocation === "All Beds" && <TableCell><b>Bed</b></TableCell>}
                     <TableCell><b>Plant Name</b></TableCell>
                     <TableCell><b>Notes </b>(editable)</TableCell>
                     <TableCell><b>Status</b></TableCell>
@@ -383,7 +383,7 @@ const WalkthroughPage: React.FC = () => {
                 <TableBody>
                     {plantSnapshots.map((snapshot) => (
                         <TableRow key={snapshot.id}>
-                            {selectedBed === 'All Beds' && <TableCell>{snapshot.bed}</TableCell>}
+                            {selectedLocation === 'All Beds' && <TableCell>{snapshot.location_name}</TableCell>}
                             {/* Plant Name - Not Editable */}
                             <TableCell style={{ fontWeight: 'bold' }}>
                                 {snapshot.plant_name}
@@ -436,7 +436,7 @@ const WalkthroughPage: React.FC = () => {
                 <Table>
                 <TableHead>
                     <TableRow>
-                        {selectedBed === "All Beds" && <TableCell><b>Bed</b></TableCell>}
+                        {selectedLocation === "All Beds" && <TableCell><b>Bed</b></TableCell>}
                         <TableCell><b>Task</b> (editable)</TableCell>
                         <TableCell><b>Status</b></TableCell>
                             {displayColumns.assignee && <TableCell><b>Assignee</b></TableCell>}
@@ -447,7 +447,7 @@ const WalkthroughPage: React.FC = () => {
                 <TableBody>
                     {tasks.map((task) => (
                     <TableRow key={task.id}>
-                        {selectedBed === 'All Beds' && <TableCell>{task.bed}</TableCell>}
+                        {selectedLocation === 'All Beds' && <TableCell>{task.bed}</TableCell>}
                         <TableCell onDoubleClick={() => handleEditStart(task.id, 'task_description', task.task_description)}>
                             {editableCell.rowId === task.id && editableCell.column === 'task_description' ? (
                                 <TextField

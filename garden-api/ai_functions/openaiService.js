@@ -33,7 +33,7 @@ async function processLocationsWithAI(record) {
             "type": "function",
             "function": {
                 "name": "process_locations",
-                "description": "A function that takes garden notes and location_table. It maps each plant in the notes to a location, and returns structured location data about the plants in a JSON list. plant_name is the singular common plant name (e.g. tomato, not tomatoes and not tomato seeds). Location data is taken from the locations_table provided",
+                "description": "A function that takes garden notes and location_table. It maps each plant in the notes to a location, and returns structured location data about the plants in a JSON list. The exact fields MUST BE EXACTLY: plant_name is the singular common plant name (e.g. tomato, not tomatoes and not tomato seeds), area_name (if there is a fuzzy match, otherwise ''), area_id (related to area_name, otherwise ''), location_name (if there is a fuzzy match within area_name, otherwise ''), and location_id (related to area_name and location_name, otherwise ''). Location data is taken from the locations_table provided",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -42,10 +42,12 @@ async function processLocationsWithAI(record) {
                             "description": "A list of plants and their location information",
                             "items":{
                                 "plant_name": {"type": "string", "description": "Name of the plant"},
-                                "area_id": {"type": "int", "description": "area id"},
-                                "location_id": {"type": "int", "description": "location id"},
+                                "area_name": {"type": "string", "description": "Name of the area where the plant is located. '' if not specified"},
+                                "area_id": {"type": "int", "description": "area id as a NUMBER"},
+                                "location_name": {"type": "string", "description": "Name of the location where the plant is located. '' if not specified"},
+                                "location_id": {"type": "int", "description": "location id as a NUMBER"},
                                 },
-                            "required": ["plant_name", "area_id", "location_id"]
+                            "required": ["plant_name", "area_name", "area_id", "location_name", "location_id"]
                             }
                         },
                     "required": ["locationsList"] 
@@ -57,11 +59,10 @@ async function processLocationsWithAI(record) {
     // Messages to instruct the model
     const messages = [
         // Instruction for AI to process garden notes
-        {"role": "system", "content": "Analyze the garden notes to extract plant names and locations, and return a JSON list of objects. Each object should contain plant_name, area_id, and location_id. A fuzzy match is fine, but you can leave blank for a plant if there's no area or location mentioned. Return a JSON list of objects, even if one object only" },
-        {'role': 'user', 'content': `location_table: ${JSON.stringify(location_table)}, Garden notes: ${record.notes}`},
-    ];
-
-    console.log("Sending the following record notes to OpenAI for processing:", messages);
+        {"role": "system", "content": `Analyze the garden notes to extract plant names. Then, lookup area and location names from the location_table, and return a JSON list of objects. The objects MUST contain EXACTLY the fields plant_name, area_name, area_id [as an INT], location_name, and location_id [as an INT]. The fields and format is CRITICAL. A fuzzy match is fine, but you can leave blank for a plant if there's no area or location mentioned. Return a JSON list of objects, even if one object only. Here is example output: [{plant_name: 'bok choy', area_name: 'Spiral Herb Garden', area_id: 19, location_name: '', location_id: null},{plant_name: 'tulsi', area_name: 'Spiral Herb Garden', area_id: 19, location_name: '', location_id: null}]`},
+        {'role': 'user', 'content': `location_table: ${JSON.stringify(location_table)}, Garden notes: ${record.notes}`},]
+                
+        console.log("Sending the following record notes to OpenAI for processing:", messages);
 
     try {
         // Making the API call with structured data
@@ -107,8 +108,8 @@ async function processGardenNotesWithAI(record) {
                                 "plant_name": {"type": "string", "description": "Name of the plant"},
                                 "action_category": {"type": "string", "enum": ["observation", "task"], "description": "Category of the action"},
                                 "notes": {"type": "string", "description": "Summary of the notes related to the specific plant"},
-                                "area_id": {"type": "string", "description": "ID of the area where the plant is located. '' if not specified"},
-                                "location_id": {"type": "string", "description": "ID of the location where the plant is located. '' if not specified"}
+                                "area_id": {"type": "string", "description": "ID of the area where the plant is located. null if not specified"},
+                                "location_id": {"type": "string", "description": "ID of the location where the plant is located. null if not specified"}
                                 },
                             "required": ["plant_name", "action_category", "notes", "area_id", "location_id"]
                             }
@@ -160,7 +161,7 @@ async function processPlantTrackerToPlantSnapshotAI(existingSnapshots) {
             "type": "function",
             "function": {
                 "name": "update_plant_snapshot",
-                "description": "A function that processes plant tracker data and provides instructions for updating plant snapshot. Each includes plant_name, plant_status (healthy, fruiting, sick, etc.), and notes (relevant to the gardener to care for the plant on their rounds).",
+                "description": "A function that processes plant tracker data and provides instructions for updating plant snapshot. Each includes plant_name, plant_status (healthy, fruiting, sick, etc.), notes (relevant to the gardener to care for the plant on their rounds), area_id and location_id.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -171,9 +172,10 @@ async function processPlantTrackerToPlantSnapshotAI(existingSnapshots) {
                                 "plant_name": {"type": "string"},
                                 "plant_status": {"type": "string", "description": "something like healthy, fruiting, sick, etc."},
                                 "notes": {"type": "string", "description": "any notes relevant to the gardener to care for the plant"},
+                                "area_id": {"type": "string", "description": "ID of the area where the plant is located. '' if not specified"},
                                 "location_id": {"type": "string", "description": "ID of the location where the plant is located. '' if not specified"}
                             },
-                            "required": ["plant_name", "plant_status", "notes", "location_id"]
+                            "required": ["plant_name", "plant_status", "notes", "area_id", "location_id"]
                         }
                     },
                     "required": ["updatedSnapshot"]
@@ -184,7 +186,7 @@ async function processPlantTrackerToPlantSnapshotAI(existingSnapshots) {
     const messages = [
         {
             "role": "system", 
-            "content": "Process the plant tracker data and existing snapshot in the batch using the update_plant_snapshot tool. Provide an updated snapshot for each plant considering the new plant information, the old entry, and any updated plants in JSON format, including information that would be most relevant to the garden (DO NOT include the name or location of the plant in these notes). Each object should contain the fields plant_name, plant_status, notes, and location_id."
+            "content": "Process the plant tracker data and existing snapshot in the batch using the update_plant_snapshot tool. Provide an updated snapshot for each plant considering the new plant information, the old entry, and any updated plants in JSON format, including information that would be most relevant to the garden (DO NOT include the name or location of the plant in these notes). Each object should contain the fields plant_name, plant_status, notes, area_id, and location_id."
         },
         {
             'role': 'user', 

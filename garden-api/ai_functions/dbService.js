@@ -88,8 +88,8 @@ async function insertPlantTracker(plantInfos) {
         console.log("plant info:", plantInfo)
         // Database operations for each plant
         await db.query(
-            'INSERT INTO plant_tracker (date, location_id, plant_name, action_category, notes, picture) VALUES ($1, $2, $3, $4, $5, $6)', 
-            [record.date, plantInfo.location_id, plantInfo.plant_name, plantInfo.action_category, plantInfo.notes, record.id]
+            'INSERT INTO plant_tracker (date, area_id, location_id, plant_name, action_category, notes, picture) VALUES ($1, $2, $3, $4, $5, $6, $7)', 
+            [record.date, plantInfo.area_id, plantInfo.location_id, plantInfo.plant_name, plantInfo.action_category, plantInfo.notes, record.id]
         );
         console.log(`Record for ${plantInfo.plant_name} processed and inserted into plant_tracker`);
         }
@@ -100,15 +100,23 @@ async function insertPlantTracker(plantInfos) {
 
 async function getExistingPlantSnapshots(plantInfos) {
     let batchUpdates = [];
-        for (const plantInfo of plantInfos) {
-            console.log("Checking for existing plant snapshot for", plantInfo.plant_name);
-            const snapshotQuery = 'SELECT * FROM plant_snapshot WHERE plant_name = $1 AND location_id = $2';
-            const snapshotResult = await db.query(snapshotQuery, [plantInfo.plant_name, plantInfo.location_id]);
-            const existingSnapshot = snapshotResult.rowCount > 0 ? snapshotResult.rows[0] : null;
-            console.log("existing snap:", existingSnapshot)
-
-            batchUpdates.push({ plantInfo, existingSnapshot });
+    for (const plantInfo of plantInfos) {
+        console.log("Checking for existing plant snapshot for", plantInfo.plant_name);
+        let snapshotQuery;
+        let snapshotParams;
+        if (plantInfo.location_id) {
+            snapshotQuery = 'SELECT * FROM plant_snapshot WHERE plant_name = $1 AND location_id = $2';
+            snapshotParams = [plantInfo.plant_name, plantInfo.location_id];
+        } else {
+            snapshotQuery = 'SELECT * FROM plant_snapshot WHERE plant_name = $1 AND area_id = $2';
+            snapshotParams = [plantInfo.plant_name, plantInfo.area_id];
         }
+        const snapshotResult = await db.query(snapshotQuery, snapshotParams);
+        const existingSnapshot = snapshotResult.rowCount > 0 ? snapshotResult.rows[0] : null;
+        console.log("existing snap:", existingSnapshot);
+
+        batchUpdates.push({ plantInfo, existingSnapshot });
+    }
     return batchUpdates;
 }
 
@@ -127,8 +135,8 @@ async function updatePlantSnapshot(record, existingSnapshots, updatedSnapshots) 
             await db.query(updateQuery, [record.date, updatedSnapshot.plant_status, updatedSnapshot.notes, existingSnapshot.existingSnapshot.id]);
         } else {
             // Insert new snapshot
-            const insertQuery = 'INSERT INTO plant_snapshot (updated_date, location_id, plant_name, plant_status, notes) VALUES ($1, $2, $3, $4, $5) RETURNING id';
-            await db.query(insertQuery, [record.date, updatedSnapshot.location_id, updatedSnapshot.plant_name, updatedSnapshot.plant_status, updatedSnapshot.notes]);
+            const insertQuery = 'INSERT INTO plant_snapshot (updated_date, area_id, location_id, plant_name, plant_status, notes) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id';
+            await db.query(insertQuery, [record.date, updatedSnapshot.area_id, updatedSnapshot.location_id, updatedSnapshot.plant_name, updatedSnapshot.plant_status, updatedSnapshot.notes]);
         }
     }
     

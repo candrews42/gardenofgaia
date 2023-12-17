@@ -90,11 +90,11 @@ const GardenDetectivePage: React.FC = () => {
 
 
     const uniqueAreas = useMemo(() => {
-        return Array.from(new Set(gardenLocations.map(location => location.area)));
+        return Array.from(new Set(gardenLocations.map(location => location.area_name)));
     }, [gardenLocations]);
 
     const bedsForSelectedArea = useMemo(() => {
-        return Array.from(new Set(gardenLocations.filter(location => location.area === selectedArea).map(location => location.bed)));
+        return Array.from(new Set(gardenLocations.filter(location => location.area_name === selectedArea).map(location => location.location_name)));
     }, [gardenLocations, selectedArea]);
 
     // handle image change
