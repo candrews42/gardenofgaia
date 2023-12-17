@@ -20,6 +20,73 @@ async function queryOpenAI(prompt) {
 }
 
 // Process garden notes using AI
+async function processLocationsWithAI(record) {
+    console.log("Processing garden notes for locations with AI for record:", record.notes);
+
+    // Fetch garden locations table
+    const location_table = await getGardenLocations();
+    // id, area, bed
+
+    // Tool definition for processing garden notes
+    const tools = [
+        {
+            "type": "function",
+            "function": {
+                "name": "process_locations",
+                "description": "A function that takes garden notes and location_table. It maps each plant in the notes to a location, and returns structured location data about the plants in a JSON list. plant_name is the singular common plant name (e.g. tomato, not tomatoes and not tomato seeds). Location data is taken from the locations_table provided",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "locationsList": {
+                            "type": "array",
+                            "description": "A list of plants and their location information",
+                            "items":{
+                                "plant_name": {"type": "string", "description": "Name of the plant"},
+                                "area_id": {"type": "int", "description": "area id"},
+                                "location_id": {"type": "int", "description": "location id"},
+                                },
+                            "required": ["plant_name", "area_id", "location_id"]
+                            }
+                        },
+                    "required": ["locationsList"] 
+                }
+            }
+        }
+    ];
+
+    // Messages to instruct the model
+    const messages = [
+        // Instruction for AI to process garden notes
+        {"role": "system", "content": "Analyze the garden notes to extract plant names and locations, and return a JSON list of objects. Each object should contain plant_name, area_id, and location_id. A fuzzy match is fine, but you can leave blank for a plant if there's no area or location mentioned. Return a JSON list of objects, even if one object only" },
+        {'role': 'user', 'content': `location_table: ${JSON.stringify(location_table)}, Garden notes: ${record.notes}`},
+    ];
+
+    console.log("Sending the following record notes to OpenAI for processing:", messages);
+
+    try {
+        // Making the API call with structured data
+        const response = await openai.chat.completions.create({
+            model: openai_model,
+            messages: messages,
+            tools: tools,
+            tool_choice: {"type": "function", "function": {"name": "process_locations"}},
+            response_format: {type: "json_object"}
+        }); 
+
+        // Parse the response to get plant list
+        const message = response.choices[0].message.tool_calls[0].function.arguments;
+        const parsedContent = JSON.parse(message).locationsList;
+        console.log("received from OpenAI: ", parsedContent)
+        return parsedContent
+
+    } catch (error) {
+        console.error('Error in processGardenNotesWithAI:', error);
+    }
+
+    return null;
+}
+
+// Process garden notes using AI
 async function processGardenNotesWithAI(record) {
     console.log("Processing garden notes with AI for record:", record.notes);
 
@@ -40,9 +107,10 @@ async function processGardenNotesWithAI(record) {
                                 "plant_name": {"type": "string", "description": "Name of the plant"},
                                 "action_category": {"type": "string", "enum": ["observation", "task"], "description": "Category of the action"},
                                 "notes": {"type": "string", "description": "Summary of the notes related to the specific plant"},
+                                "area_id": {"type": "string", "description": "ID of the area where the plant is located. '' if not specified"},
                                 "location_id": {"type": "string", "description": "ID of the location where the plant is located. '' if not specified"}
                                 },
-                            "required": ["plant_name", "action_category", "notes", "location_id"]
+                            "required": ["plant_name", "action_category", "notes", "area_id", "location_id"]
                             }
                         },
                     "required": ["plantList"] 
@@ -50,12 +118,11 @@ async function processGardenNotesWithAI(record) {
             }
         }
     ];
-    const location_table = await getGardenLocations();
-    //id, area, bed
+    const location_table = await processLocationsWithAI(record);
 
     // Messages to instruct the model
     const messages = [
-        {"role": "system", "content": "Analyze the garden notes and return a JSON list of objects, each object representing a different plant mentioned in the notes. Each object should populate fields: plant_name [singular common lower case plant name], action_category [enum: task (requires future action by some human), observation (happened in past or user predicts)], notes [describing task or observation], and location_id [if a location is mentioned for ANY plant in the notes use the location for ALL plants unless there are multiple locations specified. Use a liberal fuzzy match the location_table provided for reference]. If there's only one plant mentioned, return a list with a single object." },
+        {"role": "system", "content": "Analyze the garden notes and return a JSON list of objects, each object representing a different plant mentioned in the notes. Each object should populate fields: plant_name [singular common lower case plant name], action_category [enum: task (requires future action by some human), observation (happened in past or user predicts)], notes [describing task or observation], area_id, and location_id. If there's only one plant mentioned, return a list with a single object." },
         {'role': 'user', 'content': `location_table: ${JSON.stringify(location_table)}, Garden notes: ${record.notes}`},
     ];
 
@@ -219,5 +286,5 @@ async function processTaskListWithAI(record, existingTasks) {
 }
 
 
-module.exports = { queryOpenAI, processTaskListWithAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI };
+module.exports = { queryOpenAI, processLocationsWithAI, processTaskListWithAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI };
 

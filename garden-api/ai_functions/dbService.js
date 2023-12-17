@@ -2,7 +2,7 @@ const db = require('../db');
 require('dotenv').config({ path: '../.env' });
 
 async function getGardenLocations() {
-    const gardenLocationsQuery = `SELECT id, area, bed FROM garden_locations`;
+    const gardenLocationsQuery = `SELECT area_id, area_name, location_id, location_name, area_id FROM garden_locations`;
     const gardenLocationsResult = await db.query(gardenLocationsQuery);
     const garden_locations = gardenLocationsResult.rowCount > 0 ? gardenLocationsResult.rows : null;
     return garden_locations;

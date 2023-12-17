@@ -271,6 +271,10 @@ const GardenDetectivePage: React.FC = () => {
         console.log(selectedLocationId)
         const formData = new FormData();
         if (selectedDate) {
+            const currentDate = new Date();
+            selectedDate.setHours(currentDate.getHours());
+            selectedDate.setMinutes(currentDate.getMinutes());
+            selectedDate.setSeconds(currentDate.getSeconds());
             formData.append('date', selectedDate.toISOString());
         } else {
             // Handle the case where selectedDate is null
