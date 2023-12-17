@@ -20,7 +20,7 @@ async function processTaskList(record) {
         
         await updateTaskManager(record, existingTaskList, updatedTaskList);
         // data added to plant_tracker            
-        return updatedTaskList
+        return updatedTaskList 
     } catch (error) {
         console.error('Error processing garden notes for task manager:', record.id, error);
     }
