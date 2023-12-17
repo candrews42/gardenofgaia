@@ -5,9 +5,9 @@ import fetchData from './fetchData';
 export const useGardenLocations = (selectedArea: string, selectedBed: string) => {
     // get garden locations
     interface GardenLocation {
-        id: number;
-        area: string;
-        bed: string;
+        location_id: number;
+        area_name: string;
+        location_name: string;
         area_id: number;
     }
     const [gardenLocations, setGardenLocations] = useState<GardenLocation[]>([]);
@@ -21,11 +21,11 @@ export const useGardenLocations = (selectedArea: string, selectedBed: string) =>
     useEffect(() => {
         if (selectedArea && selectedBed) {
             const selectedLocation = gardenLocations.find(location => 
-                location.area === selectedArea && location.bed === selectedBed
+                location.area_name === selectedArea && location.location_name === selectedBed
             );
         if (selectedLocation) {
             setSelectedAreaId(selectedLocation.area_id);
-            setSelectedLocationId(selectedLocation.id);
+            setSelectedLocationId(selectedLocation.location_id);
         }
         }
     }, [selectedArea, selectedBed, gardenLocations]);
