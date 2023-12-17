@@ -257,7 +257,7 @@ const { processTaskList, processGardenNotes, processPlantTrackerForSnapshot } = 
 app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
     try {
         //console.log('received:', req.body);
-        const { date, location_id, notes, username, current_location } = req.body;
+        const { date, area_id, location_id, notes, username, current_location } = req.body;
 
         // image handling
         let resizedImage;
@@ -272,8 +272,8 @@ app.post('/api/area-tracker-raw', upload.single('image'), async (req, res) => {
         // insert raw observations into area_tracker_raw table
         console.log('received:', date, location_id, notes, username, current_location, resizedImage);
         const newEntry = await pool.query(
-            'INSERT INTO area_tracker_raw (date, location_id, notes, username, current_location, image) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *',
-            [date, location_id, notes, username, current_location, resizedImage]
+            'INSERT INTO area_tracker_raw (date, area_id, location_id, notes, username, current_location, image) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *',
+            [date, area_id, location_id, notes, username, current_location, resizedImage]
         );
         // After successful insertion, process the garden notes
         record = newEntry.rows[0];

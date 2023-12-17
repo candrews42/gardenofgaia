@@ -90,11 +90,11 @@ const WalkthroughPage: React.FC = () => {
 
 
     const uniqueAreas = useMemo(() => {
-        return Array.from(new Set(gardenLocations.map(location => location.area)));
+        return Array.from(new Set(gardenLocations.map(location => location.area_name)));
     }, [gardenLocations]);
 
     const bedsForSelectedArea = useMemo(() => {
-        return Array.from(new Set(gardenLocations.filter(location => location.area === selectedArea).map(location => location.bed)));
+        return Array.from(new Set(gardenLocations.filter(location => location.area_name === selectedArea).map(location => location.location_name)));
     }, [gardenLocations, selectedArea]);
 
     // handle image change
@@ -278,6 +278,9 @@ const WalkthroughPage: React.FC = () => {
         } else {
             // Handle the case where selectedDate is null
             console.error('Date is not selected');
+        }
+        if (selectedAreaId !== null) {
+            formData.append('area_id', selectedAreaId.toString());
         }
         if (selectedLocationId !== null) {
             formData.append('location_id', selectedLocationId.toString());

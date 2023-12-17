@@ -2,7 +2,7 @@ const db = require('../db');
 require('dotenv').config({ path: '../.env' });
 const { OpenAI } = require('openai');
 const openai = new OpenAI({ key: process.env.OPENAI_API_KEY });
-const { queryOpenAI, processTaskListWithAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI } = require('./openaiService'); 
+const { queryOpenAI, processTaskListWithAI, processGardenNotesWithAI, processPlantTrackerToPlantSnapshotAI, processLocationsWithAI } = require('./openaiService'); 
 const { getExistingTaskList, updateTaskManager, insertPlantTracker, getExistingPlantSnapshots, updatePlantSnapshot } = require('./dbService'); 
 
 async function processTaskList(record) {
@@ -31,11 +31,18 @@ async function processGardenNotes(record) {
         // STEP 1. Parse observation and add to plant_tracker
         console.log(`Processing record: ${record.notes}`);
         // Call the new function to process garden notes
-        const plantInfos = await processGardenNotesWithAI(record);
+        const location_table = await processLocationsWithAI(record);
+        const plantInfos = await processGardenNotesWithAI(record, location_table);
         console.log("plant infos:", plantInfos)
+
         
-        await insertPlantTracker(plantInfos);
-        // data added to plant_tracker            
+        
+        await insertPlantTracker(plantInfosWithLocation);
+        // data added to plant_tracker   
+        // Add area_id and location_id from plantInfosWithLocation into plantInfos
+        //plantInfos.location_id = plantInfosWithLocation.location_id;
+        //plantInfos.area_id = plantInfosWithLocation.area_id;
+        
         return plantInfos
     } catch (error) {
         console.error('Error processing garden notes:', record.id, error);
